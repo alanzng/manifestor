@@ -572,3 +572,110 @@ func mustReadFixture(t *testing.T, path string) string {
 	}
 	return string(b)
 }
+
+// ---- Inject options via unified API ----
+
+func TestFilter_WithHLSInjectVariant(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	p0, _ := hls.Parse(content)
+	original := len(p0.Variants)
+
+	out, err := Filter(content, WithHLSInjectVariant(hls.VariantParams{
+		URI:       "https://cdn.example.com/4k.m3u8",
+		Bandwidth: 8000000,
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	p, _ := hls.Parse(out)
+	if len(p.Variants) != original+1 {
+		t.Errorf("Variants = %d, want %d", len(p.Variants), original+1)
+	}
+}
+
+func TestFilter_WithHLSInjectAudioTrack(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	p0, _ := hls.Parse(content)
+	original := len(p0.AudioTracks)
+
+	out, err := Filter(content, WithHLSInjectAudioTrack(hls.AudioTrackParams{
+		GroupID:  "audio",
+		Name:     "French",
+		Language: "fr",
+		URI:      "fr/audio.m3u8",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	p, _ := hls.Parse(out)
+	if len(p.AudioTracks) != original+1 {
+		t.Errorf("AudioTracks = %d, want %d", len(p.AudioTracks), original+1)
+	}
+}
+
+func TestFilter_WithHLSInjectSubtitle(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	p0, _ := hls.Parse(content)
+	original := len(p0.Subtitles)
+
+	out, err := Filter(content, WithHLSInjectSubtitle(hls.SubtitleTrackParams{
+		GroupID:  "subs",
+		Name:     "English",
+		Language: "en",
+		URI:      "en/subs.m3u8",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	p, _ := hls.Parse(out)
+	if len(p.Subtitles) != original+1 {
+		t.Errorf("Subtitles = %d, want %d", len(p.Subtitles), original+1)
+	}
+}
+
+func TestFilter_WithDASHInjectAdaptationSet(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	m0, _ := dash.Parse(content)
+	original := len(m0.Periods[0].AdaptationSets)
+
+	out, err := Filter(content, WithDASHInjectAdaptationSet(dash.AdaptationSetParams{
+		MimeType: "text/vtt",
+		Lang:     "en",
+		Representations: []dash.RepresentationParams{
+			{ID: "sub-en", Bandwidth: 10000, BaseURL: "https://cdn.example.com/sub-en.vtt"},
+		},
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := dash.Parse(out)
+	got := len(m.Periods[0].AdaptationSets)
+	if got != original+1 {
+		t.Errorf("AdaptationSets = %d, want %d", got, original+1)
+	}
+}
+
+func TestFilter_HLSInjectIgnoredForDASH(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	// HLS-only inject option must be silently ignored for DASH content.
+	_, err := Filter(content, WithHLSInjectVariant(hls.VariantParams{
+		URI: "https://cdn.example.com/4k.m3u8", Bandwidth: 8000000,
+	}))
+	if err != nil {
+		t.Errorf("unexpected error for DASH content with HLS inject option: %v", err)
+	}
+}
+
+func TestFilter_DASHInjectIgnoredForHLS(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	// DASH-only inject option must be silently ignored for HLS content.
+	_, err := Filter(content, WithDASHInjectAdaptationSet(dash.AdaptationSetParams{
+		MimeType: "text/vtt",
+		Representations: []dash.RepresentationParams{
+			{ID: "sub-en", Bandwidth: 10000},
+		},
+	}))
+	if err != nil {
+		t.Errorf("unexpected error for HLS content with DASH inject option: %v", err)
+	}
+}
