@@ -50,8 +50,91 @@ func (b *MasterBuilder) AddIFrameStream(p IFrameParams) *MasterBuilder {
 //
 // Returns ErrEmptyVariantList if no variants were added.
 // Returns ErrInvalidVariant if any variant is missing URI or Bandwidth.
-// Returns ErrOrphanedGroupID if a variant's AudioGroupID has no matching EXT-X-MEDIA group.
+// Returns ErrOrphanedGroupID if a variant's AudioGroupID or SubtitleGroupID
+// has no matching EXT-X-MEDIA entry.
 func (b *MasterBuilder) Build() (string, error) {
-	// TODO: implement
-	panic("not implemented")
+	if len(b.variants) == 0 {
+		return "", ErrEmptyVariantList
+	}
+
+	// Validate variants.
+	for _, v := range b.variants {
+		if v.URI == "" || v.Bandwidth == 0 {
+			return "", ErrInvalidVariant
+		}
+	}
+
+	// Build group-ID sets for orphan detection.
+	audioGroups := make(map[string]bool, len(b.audio))
+	for _, a := range b.audio {
+		audioGroups[a.GroupID] = true
+	}
+	subtitleGroups := make(map[string]bool, len(b.subtitles))
+	for _, s := range b.subtitles {
+		subtitleGroups[s.GroupID] = true
+	}
+
+	for _, v := range b.variants {
+		if v.AudioGroupID != "" && !audioGroups[v.AudioGroupID] {
+			return "", ErrOrphanedGroupID
+		}
+		if v.SubtitleGroupID != "" && !subtitleGroups[v.SubtitleGroupID] {
+			return "", ErrOrphanedGroupID
+		}
+	}
+
+	// Convert params to types and delegate to Serialize.
+	p := &MasterPlaylist{Version: b.version}
+
+	for _, a := range b.audio {
+		p.AudioTracks = append(p.AudioTracks, MediaTrack{
+			Type:       "AUDIO",
+			GroupID:    a.GroupID,
+			Name:       a.Name,
+			Language:   a.Language,
+			URI:        a.URI,
+			Default:    a.Default,
+			AutoSelect: a.AutoSelect,
+			Forced:     a.Forced,
+		})
+	}
+
+	for _, s := range b.subtitles {
+		p.Subtitles = append(p.Subtitles, MediaTrack{
+			Type:     "SUBTITLES",
+			GroupID:  s.GroupID,
+			Name:     s.Name,
+			Language: s.Language,
+			URI:      s.URI,
+			Default:  s.Default,
+			Forced:   s.Forced,
+		})
+	}
+
+	for _, v := range b.variants {
+		p.Variants = append(p.Variants, Variant{
+			URI:              v.URI,
+			Bandwidth:        v.Bandwidth,
+			AverageBandwidth: v.AverageBandwidth,
+			Codecs:           v.Codecs,
+			Width:            v.Width,
+			Height:           v.Height,
+			FrameRate:        v.FrameRate,
+			AudioGroupID:     v.AudioGroupID,
+			SubtitleGroupID:  v.SubtitleGroupID,
+			HDCPLevel:        v.HDCPLevel,
+		})
+	}
+
+	for _, f := range b.iframes {
+		p.IFrames = append(p.IFrames, IFrameStream{
+			URI:       f.URI,
+			Bandwidth: f.Bandwidth,
+			Codecs:    f.Codecs,
+			Width:     f.Width,
+			Height:    f.Height,
+		})
+	}
+
+	return Serialize(p)
 }
