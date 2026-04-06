@@ -271,3 +271,160 @@ func TestParse_OnDemand_StartWithSAPInherited(t *testing.T) {
 		}
 	}
 }
+
+// ---- Bento4 mixed-codecs fixture ----
+
+func TestParse_Bento4Mixed_TopLevel(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	mpd, err := Parse(content)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mpd.Duration != "PT1H22M24.040S" {
+		t.Errorf("Duration = %q, want PT1H22M24.040S", mpd.Duration)
+	}
+	if mpd.MinBufferTime != "PT4.00S" {
+		t.Errorf("MinBufferTime = %q, want PT4.00S", mpd.MinBufferTime)
+	}
+}
+
+func TestParse_Bento4Mixed_AdaptationSetCount(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	mpd, _ := Parse(content)
+	as := mpd.Periods[0].AdaptationSets
+	// 2 video sets + 1 audio set
+	if len(as) != 3 {
+		t.Fatalf("AdaptationSets = %d, want 3", len(as))
+	}
+}
+
+func TestParse_Bento4Mixed_HEVCRepresentations(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	mpd, _ := Parse(content)
+	reps := mpd.Periods[0].AdaptationSets[0].Representations
+	if len(reps) != 5 {
+		t.Fatalf("HEVC representations = %d, want 5", len(reps))
+	}
+
+	tests := []struct {
+		id        string
+		bandwidth int
+		width     int
+		height    int
+		codecs    string
+		frameRate string
+	}{
+		{"video-hvc1-1", 2455725, 1280, 720, "hvc1.1.2.L120.90", "50"},
+		{"video-hvc1-2", 5541941, 1920, 1080, "hvc1.1.2.L123.90", "50"},
+		{"video-hvc1-3", 757752, 854, 480, "hvc1.1.2.L93.90", "50"},
+		{"video-hvc1-4", 8638946, 2560, 1440, "hvc1.1.2.L150.90", "50"},
+		{"video-hvc1-5", 21552440, 3840, 2160, "hvc1.1.2.L153.90", "50"},
+	}
+	for i, tt := range tests {
+		r := reps[i]
+		if r.ID != tt.id {
+			t.Errorf("[%d] ID = %q, want %q", i, r.ID, tt.id)
+		}
+		if r.Bandwidth != tt.bandwidth {
+			t.Errorf("[%d] Bandwidth = %d, want %d", i, r.Bandwidth, tt.bandwidth)
+		}
+		if r.Width != tt.width || r.Height != tt.height {
+			t.Errorf("[%d] Resolution = %dx%d, want %dx%d", i, r.Width, r.Height, tt.width, tt.height)
+		}
+		if r.Codecs != tt.codecs {
+			t.Errorf("[%d] Codecs = %q, want %q", i, r.Codecs, tt.codecs)
+		}
+		if r.FrameRate != tt.frameRate {
+			t.Errorf("[%d] FrameRate = %q, want %q", i, r.FrameRate, tt.frameRate)
+		}
+	}
+}
+
+func TestParse_Bento4Mixed_AVC1Representations(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	mpd, _ := Parse(content)
+	reps := mpd.Periods[0].AdaptationSets[1].Representations
+	if len(reps) != 4 {
+		t.Fatalf("AVC1 representations = %d, want 4", len(reps))
+	}
+
+	tests := []struct {
+		id        string
+		bandwidth int
+		codecs    string
+	}{
+		{"video-avc1-1", 4616502, "avc1.640028"},
+		{"video-avc1-2", 2363259, "avc1.64001F"},
+		{"video-avc1-3", 930116, "avc1.4D401E"},
+		{"video-avc1-4", 1528065, "avc1.4D401E"},
+	}
+	for i, tt := range tests {
+		r := reps[i]
+		if r.ID != tt.id {
+			t.Errorf("[%d] ID = %q, want %q", i, r.ID, tt.id)
+		}
+		if r.Bandwidth != tt.bandwidth {
+			t.Errorf("[%d] Bandwidth = %d, want %d", i, r.Bandwidth, tt.bandwidth)
+		}
+		if r.Codecs != tt.codecs {
+			t.Errorf("[%d] Codecs = %q, want %q", i, r.Codecs, tt.codecs)
+		}
+	}
+}
+
+func TestParse_Bento4Mixed_4KResolution(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	mpd, _ := Parse(content)
+	r := mpd.Periods[0].AdaptationSets[0].Representations[4] // video-hvc1-5
+	if r.Width != 3840 || r.Height != 2160 {
+		t.Errorf("4K resolution = %dx%d, want 3840x2160", r.Width, r.Height)
+	}
+}
+
+func TestParse_Bento4Mixed_AudioAdaptationSet(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	mpd, _ := Parse(content)
+	as := mpd.Periods[0].AdaptationSets[2]
+	if as.MimeType != "audio/mp4" {
+		t.Errorf("audio MimeType = %q, want audio/mp4", as.MimeType)
+	}
+	if as.Lang != "tg" {
+		t.Errorf("audio Lang = %q, want tg", as.Lang)
+	}
+	if len(as.Representations) != 1 {
+		t.Fatalf("audio representations = %d, want 1", len(as.Representations))
+	}
+	r := as.Representations[0]
+	if r.ID != "audio-tg-mp4a.40.2" {
+		t.Errorf("audio ID = %q, want audio-tg-mp4a.40.2", r.ID)
+	}
+	if r.Bandwidth != 197665 {
+		t.Errorf("audio Bandwidth = %d, want 197665", r.Bandwidth)
+	}
+	if r.Codecs != "mp4a.40.2" {
+		t.Errorf("audio Codecs = %q, want mp4a.40.2", r.Codecs)
+	}
+}
+
+func TestParse_Bento4Mixed_SegmentBase(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	mpd, _ := Parse(content)
+	// Representations use SegmentBase (not SegmentTemplate) in this fixture.
+	// AdaptationSet has no SegmentTemplate.
+	as := mpd.Periods[0].AdaptationSets[0]
+	if as.SegmentTemplate != nil {
+		t.Error("expected no SegmentTemplate on AdaptationSet")
+	}
+}
+
+func TestParse_Bento4Mixed_MimeTypeInheritedByAllReps(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	mpd, _ := Parse(content)
+	for _, as := range mpd.Periods[0].AdaptationSets {
+		for i, r := range as.Representations {
+			if r.MimeType != as.MimeType {
+				t.Errorf("as[%s] rep[%d].MimeType = %q, want %q (inherited)", as.ID, i, r.MimeType, as.MimeType)
+			}
+		}
+	}
+}
