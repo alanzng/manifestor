@@ -153,6 +153,18 @@ func WithHLSInjectSubtitle(p hls.SubtitleTrackParams) Option {
 	return hlsInjectSubtitleOption{params: p}
 }
 
+// hlsVariantSubtitleGroupOption sets SUBTITLES= on all surviving HLS variants.
+type hlsVariantSubtitleGroupOption struct {
+	hlsOnlyOption
+	groupID string
+}
+
+// WithHLSVariantSubtitleGroup sets the SUBTITLES group ID on all surviving HLS variant streams.
+// Use together with WithHLSInjectSubtitle to wire variants to a subtitle group.
+func WithHLSVariantSubtitleGroup(groupID string) Option {
+	return hlsVariantSubtitleGroupOption{groupID: groupID}
+}
+
 // ---- DASH filter inject options ----
 
 // dashInjectAdaptationSetOption injects an AdaptationSet during DASH filtering.

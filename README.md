@@ -14,7 +14,8 @@ Parse, filter, build, and transform HLS & DASH manifests in Go. Zero dependencie
 
 - **Parse** HLS Master Playlists (`.m3u8`) and DASH MPDs (`.mpd`) from string, file, or URL
 - **Filter** variants/representations by codec, resolution, bandwidth, frame rate, audio language, MIME type
-- **Transform** URIs — CDN rewrites, absolute URI resolution, auth token injection
+- **Transform** URIs — CDN rewrites, absolute URI resolution, auth token injection (variants, audio tracks, I-frame streams, and DASH `<BaseURL>` elements)
+- **Inject** extra tracks — append subtitle tracks, alternate audio, or additional representations after filtering
 - **Build** complete HLS or DASH manifests from scratch with a fluent builder API
 - **Serve** as an HTTP proxy that filters manifests on the fly
 - **CLI** tool for scripting and local use
@@ -67,6 +68,76 @@ filtered, err := manifest.Filter(content,
 filtered, err := manifest.FilterFromURL("https://example.com/master.m3u8",
     manifest.WithCodec("h264"),
     manifest.WithAuthToken("token=abc123"),
+)
+```
+
+### Real-world example — Vieon VOD pipeline
+
+Take a Bento4-generated master playlist with mixed AVC1/HVC1 video and a single audio track, and produce a delivery manifest with H.265 only, max 720p, absolute CDN URLs, a dubbed audio track, and subtitles.
+
+**HLS:**
+
+```go
+import (
+    "github.com/alanzng/manifestor/hls"
+    "github.com/alanzng/manifestor/manifest"
+)
+
+const cdnBase = "https://vod-bp.vieon.vn/abc123/.../vod/2026/03/12/uuid/"
+const dubbedBase = "https://vod-bp.vieon.vn/def456/.../vod/2026/03/24/uuid2/"
+
+out, err := manifest.Filter(content,
+    manifest.WithCodec("h265"),
+    manifest.WithMaxResolution(1280, 720),
+    manifest.WithAbsoluteURIs(cdnBase),
+    manifest.WithHLSVariantSubtitleGroup("subs"),
+    manifest.WithHLSInjectSubtitle(hls.SubtitleTrackParams{
+        GroupID:  "subs",
+        Name:     "Tiếng Việt",
+        Language: "vi",
+        URI:      "https://static.vieon.vn/subtitle/vi.m3u8",
+        Default:  true,
+    }),
+    manifest.WithHLSInjectAudioTrack(hls.AudioTrackParams{
+        GroupID:  "audio/mp4a",
+        Name:     "Thuyết Minh",
+        Language: "tm",
+        URI:      dubbedBase + "audio-tg-mp4a.m3u8",
+    }),
+)
+```
+
+**DASH:**
+
+```go
+import (
+    "github.com/alanzng/manifestor/dash"
+    "github.com/alanzng/manifestor/manifest"
+)
+
+out, err := manifest.Filter(content,
+    manifest.WithCodec("h265"),
+    manifest.WithMaxResolution(1280, 720),
+    manifest.WithAbsoluteURIs(cdnBase),
+    manifest.WithDASHInjectAdaptationSet(dash.AdaptationSetParams{
+        MimeType: "audio/mp4",
+        Lang:     "tm",
+        Name:     "Thuyết Minh",
+        Representations: []dash.RepresentationParams{
+            {ID: "tm-audio", Bandwidth: 196728, Codecs: "mp4a.40.2",
+                BaseURL: dubbedBase + "media-audio-tg-mp4a.mp4"},
+        },
+    }),
+    manifest.WithDASHInjectAdaptationSet(dash.AdaptationSetParams{
+        ContentType: "text",
+        MimeType:    "text/vtt",
+        Lang:        "vi",
+        Roles:       []dash.Role{{SchemeIDURI: "urn:mpeg:dash:role:2011", Value: "subtitle"}},
+        Representations: []dash.RepresentationParams{
+            {ID: "subtitles/vi", Bandwidth: 16,
+                BaseURL: "https://static.vieon.vn/subtitle/vi.vtt"},
+        },
+    }),
 )
 ```
 
@@ -130,6 +201,23 @@ b.AddAdaptationSet(dash.AdaptationSetParams{
         {ID: "v2", Bandwidth: 2_000_000, Codecs: "avc1.4d401f", Width: 1280, Height: 720},
     },
 })
+b.AddAdaptationSet(dash.AdaptationSetParams{
+    MimeType: "audio/mp4",
+    Lang:     "en",
+    Name:     "English",
+    Representations: []dash.RepresentationParams{
+        {
+            ID:        "a1",
+            Bandwidth: 128000,
+            Codecs:    "mp4a.40.2",
+            BaseURL:   "https://cdn.example.com/audio-en.mp4",
+            AudioChannelConfiguration: &dash.AudioChannelConfiguration{
+                SchemeIDURI: "urn:mpeg:dash:23003:3:audio_channel_configuration:2011",
+                Value:       "2",
+            },
+        },
+    },
+})
 
 mpd, err := b.Build()
 ```
@@ -161,11 +249,11 @@ manifestor build --format hls --variants spec.json --output master.m3u8
 
 ## API Reference
 
-### Filter Options
+### Filter Options (unified — work on both HLS and DASH)
 
 | Option | Description |
 |---|---|
-| `WithCodec(codec)` | Keep only variants matching codec: `h264`, `h265`, `vp9`, `av1` |
+| `WithCodec(codec)` | Keep only **video** variants matching codec: `h264`, `h265`, `vp9`, `av1`. Audio tracks are always preserved. |
 | `WithMaxResolution(w, h)` | Exclude variants wider or taller than `w×h` |
 | `WithMinResolution(w, h)` | Exclude variants smaller than `w×h` |
 | `WithExactResolution(w, h)` | Keep only variants with exactly `w×h` |
@@ -173,14 +261,34 @@ manifestor build --format hls --variants spec.json --output master.m3u8
 | `WithMinBandwidth(bps)` | Exclude variants below `bps` bits/s |
 | `WithMaxFrameRate(fps)` | Exclude variants with frame rate above `fps` |
 | `WithAudioLanguage(lang)` | Keep only audio tracks matching BCP-47 `lang` |
-| `WithMimeType(mime)` | Keep only representations matching MIME type |
-| `WithCDNBaseURL(base)` | Rewrite all URIs to use `base` as the CDN origin |
+| `WithMimeType(mime)` | Keep only representations matching MIME type (DASH only) |
+| `WithCDNBaseURL(base)` | Rewrite all URIs to use `base` as CDN origin |
 | `WithAbsoluteURIs(origin)` | Resolve relative URIs to absolute using `origin` |
-| `WithAuthToken(token)` | Append `token` as a query string to all URIs |
-| `WithCustomFilter(fn)` | User-defined filter function `func(v *Variant) bool` |
-| `WithCustomTransformer(fn)` | User-defined transformer `func(v *Variant)` |
+| `WithAuthToken(token)` | Append `token=` query parameter to all URIs |
 
-Filters compose with **AND** logic — a variant must pass all filters to survive.
+URI rewriting covers: HLS variant URIs, audio track URIs, I-frame stream URIs; DASH `<BaseURL>` elements.
+
+### HLS-only filter options
+
+| Option | Description |
+|---|---|
+| `WithHLSInjectVariant(p)` | Append a variant stream after filtering |
+| `WithHLSInjectAudioTrack(p)` | Append an `#EXT-X-MEDIA AUDIO` track after filtering |
+| `WithHLSInjectSubtitle(p)` | Append an `#EXT-X-MEDIA SUBTITLES` track after filtering |
+| `WithHLSVariantSubtitleGroup(id)` | Set `SUBTITLES="id"` on all surviving variants |
+
+### DASH-only filter options
+
+| Option | Description |
+|---|---|
+| `WithDASHInjectAdaptationSet(p)` | Append an `<AdaptationSet>` to every Period after filtering |
+
+### Custom callbacks (package-level only)
+
+| Option | Package | Description |
+|---|---|---|
+| `WithCustomFilter(fn)` | `hls`, `dash` | User-defined filter: `func(*Variant) bool` / `func(*Representation) bool` |
+| `WithCustomTransformer(fn)` | `hls`, `dash` | User-defined transformer applied to each surviving variant/representation |
 
 ### Errors
 
@@ -195,6 +303,20 @@ Filters compose with **AND** logic — a variant must pass all filters to surviv
 | `ErrInvalidVariant` | A variant is missing `URI` or `Bandwidth` |
 | `ErrOrphanedGroupID` | `AudioGroupID` references a non-existent `#EXT-X-MEDIA` group |
 | `ErrInvalidLanguageTag` | DASH `lang` is not a valid BCP-47 tag |
+
+---
+
+## DASH Data Model
+
+Key fields parsed and round-tripped through `Parse` → `Filter` → `Serialize`:
+
+| Element | Fields |
+|---|---|
+| `<MPD>` | `Profile`, `Duration`, `MinBufferTime`, `MinUpdatePeriod` |
+| `<AdaptationSet>` | `ID`, `ContentType`, `MimeType`, `Lang`, `Name` (label attr), `Roles`, `SegmentTemplate`, `SegmentBase` |
+| `<Representation>` | `ID`, `Bandwidth`, `Codecs`, `Width`, `Height`, `FrameRate`, `MimeType`, `StartWithSAP`, `BaseURL`, `AudioChannelConfiguration` |
+| `<Role>` | `SchemeIDURI`, `Value` |
+| `<AudioChannelConfiguration>` | `SchemeIDURI`, `Value` |
 
 ---
 
@@ -242,6 +364,7 @@ Tested against real-world output from:
 - [Shaka Packager](https://github.com/shaka-project/shaka-packager)
 - AWS MediaConvert
 - Azure Media Services
+- Vieon VOD platform
 
 ---
 

@@ -169,6 +169,8 @@ func toHLSOpts(opts []Option) []hls.Option {
 			out = append(out, hls.WithInjectAudioTrack(v.params))
 		case hlsInjectSubtitleOption:
 			out = append(out, hls.WithInjectSubtitle(v.params))
+		case hlsVariantSubtitleGroupOption:
+			out = append(out, hls.WithVariantSubtitleGroup(v.groupID))
 		}
 	}
 	return out
