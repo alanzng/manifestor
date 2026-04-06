@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" minBufferTime="PT3.87S" mediaPresentationDuration="PT30M46.847S" type="static">
+  <!--  Created with Bento4 mp4-dash.py, VERSION=2.0.0-637  -->
+  <Period>
+    <!--  Video  -->
+    <AdaptationSet mimeType="video/mp4" segmentAlignment="true" startWithSAP="1" maxWidth="1920" maxHeight="1080" subsegmentAlignment="true" subsegmentStartsWithSAP="1">
+      <Representation id="video-avc1-1" codecs="avc1.4D401E" width="640" height="360" scanType="progressive" frameRate="2997/100" bandwidth="563419">
+        <BaseURL>media-video-avc1-1.mp4</BaseURL>
+        <SegmentBase indexRange="824-6591">
+          <Initialization range="0-823"/>
+        </SegmentBase>
+      </Representation>
+      <Representation id="video-avc1-2" codecs="avc1.4D401F" width="854" height="480" scanType="progressive" frameRate="2997/100" bandwidth="1119516">
+        <BaseURL>media-video-avc1-2.mp4</BaseURL>
+        <SegmentBase indexRange="825-6592">
+          <Initialization range="0-824"/>
+        </SegmentBase>
+      </Representation>
+      <Representation id="video-avc1-3" codecs="avc1.640028" width="1920" height="1080" scanType="progressive" frameRate="2997/100" bandwidth="5270374">
+        <BaseURL>media-video-avc1-3.mp4</BaseURL>
+        <SegmentBase indexRange="833-6600">
+          <Initialization range="0-832"/>
+        </SegmentBase>
+      </Representation>
+      <Representation id="video-avc1-4" codecs="avc1.64001F" width="1280" height="720" scanType="progressive" frameRate="2997/100" bandwidth="2110687">
+        <BaseURL>media-video-avc1-4.mp4</BaseURL>
+        <SegmentBase indexRange="830-6597">
+          <Initialization range="0-829"/>
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet mimeType="video/mp4" segmentAlignment="true" startWithSAP="1" maxWidth="1920" maxHeight="1080" subsegmentAlignment="true" subsegmentStartsWithSAP="1">
+      <Representation id="video-hvc1-1" codecs="hvc1.1.2.L90.90" width="854" height="480" scanType="progressive" frameRate="2997/100" bandwidth="749700">
+        <BaseURL>media-video-hvc1-1.mp4</BaseURL>
+        <SegmentBase indexRange="911-6678">
+          <Initialization range="0-910"/>
+        </SegmentBase>
+      </Representation>
+      <Representation id="video-hvc1-2" codecs="hvc1.1.2.L120.90" width="1920" height="1080" scanType="progressive" frameRate="2997/100" bandwidth="5090773">
+        <BaseURL>media-video-hvc1-2.mp4</BaseURL>
+        <SegmentBase indexRange="914-6681">
+          <Initialization range="0-913"/>
+        </SegmentBase>
+      </Representation>
+      <Representation id="video-hvc1-3" codecs="hvc1.1.2.L93.90" width="1280" height="720" scanType="progressive" frameRate="2997/100" bandwidth="2065274">
+        <BaseURL>media-video-hvc1-3.mp4</BaseURL>
+        <SegmentBase indexRange="913-6680">
+          <Initialization range="0-912"/>
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+    <!--  Audio  -->
+    <AdaptationSet mimeType="audio/mp4" startWithSAP="1" segmentAlignment="true" lang="tg" subsegmentAlignment="true" subsegmentStartsWithSAP="1">
+      <Representation id="audio-tg-mp4a" codecs="mp4a.40.2" bandwidth="198848" audioSamplingRate="48000">
+        <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
+        <BaseURL>media-audio-tg-mp4a.mp4</BaseURL>
+        <SegmentBase indexRange="663-6238">
+          <Initialization range="0-662"/>
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+  </Period>
+</MPD>
