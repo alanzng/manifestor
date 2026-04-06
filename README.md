@@ -368,6 +368,14 @@ Tested against real-world output from:
 
 ---
 
+## Used By
+
+| | Company |
+|---|---|
+| [![Vieon](https://static2.vieon.vn/prod-vieon-web-v5-gcp/_next/assets/img/logo.svg)](https://vieon.vn/) | [Vieon](https://vieon.vn/) — Vietnam's leading OTT streaming platform |
+
+---
+
 ## Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
