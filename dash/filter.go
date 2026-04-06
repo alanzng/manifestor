@@ -1,6 +1,8 @@
 package dash
 
 import (
+	"net/url"
+	"path"
 	"strconv"
 	"strings"
 )
@@ -49,6 +51,15 @@ func Filter(content string, opts ...Option) (string, error) {
 
 	if totalReps == 0 {
 		return "", ErrNoVariantsRemain
+	}
+
+	// Inject additional AdaptationSets into every Period.
+	if len(cfg.injectSets) > 0 {
+		for pi := range periods {
+			for _, sp := range cfg.injectSets {
+				periods[pi].AdaptationSets = append(periods[pi].AdaptationSets, convertAdaptationSetParams(sp))
+			}
+		}
 	}
 
 	out := &MPD{
@@ -154,9 +165,75 @@ func representationPasses(r *Representation, as *AdaptationSet, cfg *filterConfi
 
 // applyTransformers applies URI and custom transformers to a surviving representation.
 func applyTransformers(r *Representation, cfg *filterConfig) {
+	if cfg.absoluteOrigin != "" {
+		r.BaseURL = makeAbsolute(r.BaseURL, cfg.absoluteOrigin)
+	}
+	if cfg.cdnBaseURL != "" {
+		r.BaseURL = rewriteCDN(r.BaseURL, cfg.cdnBaseURL)
+	}
+	if cfg.authToken != "" {
+		r.BaseURL = appendToken(r.BaseURL, cfg.authToken)
+	}
 	if cfg.customTransform != nil {
 		cfg.customTransform(r)
 	}
+}
+
+// makeAbsolute resolves uri against origin. If uri is already absolute or
+// origin is empty, uri is returned unchanged.
+func makeAbsolute(uri, origin string) string {
+	if uri == "" || origin == "" {
+		return uri
+	}
+	u, err := url.Parse(uri)
+	if err != nil || u.IsAbs() {
+		return uri
+	}
+	base, err := url.Parse(origin)
+	if err != nil {
+		return uri
+	}
+	base.Path = path.Join(base.Path, uri)
+	return base.String()
+}
+
+// rewriteCDN replaces the scheme+host of uri with those from cdnBase.
+// If uri is relative, cdnBase is prepended.
+func rewriteCDN(uri, cdnBase string) string {
+	if uri == "" || cdnBase == "" {
+		return uri
+	}
+	u, err := url.Parse(uri)
+	if err != nil {
+		return uri
+	}
+	cdn, err := url.Parse(cdnBase)
+	if err != nil {
+		return uri
+	}
+	if u.IsAbs() {
+		u.Scheme = cdn.Scheme
+		u.Host = cdn.Host
+		return u.String()
+	}
+	// Relative URI: join under the CDN base.
+	cdn.Path = path.Join(cdn.Path, uri)
+	return cdn.String()
+}
+
+// appendToken appends token as a query parameter named "token" to uri.
+func appendToken(uri, token string) string {
+	if uri == "" || token == "" {
+		return uri
+	}
+	u, err := url.Parse(uri)
+	if err != nil {
+		return uri
+	}
+	q := u.Query()
+	q.Set("token", token)
+	u.RawQuery = q.Encode()
+	return u.String()
 }
 
 // matchesCodec reports whether the codecs string contains a codec from the

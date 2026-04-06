@@ -19,6 +19,7 @@ type filterConfig struct {
 	cdnBaseURL      string
 	absoluteOrigin  string
 	authToken       string
+	injectSets      []AdaptationSetParams
 	customFilter    func(*Representation) bool
 	customTransform func(*Representation)
 }
@@ -93,4 +94,10 @@ func WithCustomFilter(fn func(*Representation) bool) Option {
 // WithCustomTransformer applies a user-defined transformer to each surviving representation.
 func WithCustomTransformer(fn func(*Representation)) Option {
 	return func(c *filterConfig) { c.customTransform = fn }
+}
+
+// WithInjectAdaptationSet appends an AdaptationSet built from p to every Period
+// after filtering. Useful for injecting subtitle or secondary audio tracks.
+func WithInjectAdaptationSet(p AdaptationSetParams) Option {
+	return func(c *filterConfig) { c.injectSets = append(c.injectSets, p) }
 }
