@@ -41,6 +41,9 @@ func Filter(content string, opts ...Option) (string, error) {
 	// Apply transformers to surviving variants.
 	for i := range filtered {
 		applyTransformers(&filtered[i], cfg)
+		if cfg.subtitleGroupID != "" {
+			filtered[i].SubtitleGroupID = cfg.subtitleGroupID
+		}
 	}
 
 	// Filter I-frame streams with the same codec/resolution/bandwidth rules (F-14).
@@ -49,12 +52,16 @@ func Filter(content string, opts ...Option) (string, error) {
 	filteredIFrames := iframes[:0]
 	for i := range iframes {
 		if iframePasses(&iframes[i], cfg) {
+			iframes[i].URI = rewriteURI(iframes[i].URI, cfg)
 			filteredIFrames = append(filteredIFrames, iframes[i])
 		}
 	}
 
-	// Filter audio tracks by language (F-08, F-13).
+	// Filter audio tracks by language (F-08, F-13) and rewrite their URIs.
 	audioTracks := filterAudioTracks(p.AudioTracks, cfg)
+	for i := range audioTracks {
+		audioTracks[i].URI = rewriteURI(audioTracks[i].URI, cfg)
+	}
 
 	// Inject additional variants, audio tracks, and subtitles.
 	for _, vp := range cfg.injectVariants {

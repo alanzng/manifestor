@@ -22,6 +22,7 @@ type filterConfig struct {
 	injectVariants    []VariantParams
 	injectAudioTracks []AudioTrackParams
 	injectSubtitles   []SubtitleTrackParams
+	subtitleGroupID   string
 	customFilter      func(*Variant) bool
 	customTransform   func(*Variant)
 }
@@ -111,4 +112,10 @@ func WithInjectAudioTrack(p AudioTrackParams) Option {
 // WithInjectSubtitle appends a subtitle media track to the playlist after filtering.
 func WithInjectSubtitle(p SubtitleTrackParams) Option {
 	return func(c *filterConfig) { c.injectSubtitles = append(c.injectSubtitles, p) }
+}
+
+// WithVariantSubtitleGroup sets the SUBTITLES group ID on all surviving variant streams.
+// Use this together with WithInjectSubtitle to wire variants to a subtitle group.
+func WithVariantSubtitleGroup(groupID string) Option {
+	return func(c *filterConfig) { c.subtitleGroupID = groupID }
 }
