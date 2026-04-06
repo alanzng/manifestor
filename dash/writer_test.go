@@ -267,3 +267,75 @@ func TestSerialize_Bento4Mixed_AudioLangPreserved(t *testing.T) {
 		t.Errorf("audio Lang = %q, want tg", as.Lang)
 	}
 }
+
+func TestSerialize_BaseURL_RoundTrip(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	m, _ := Parse(content)
+	out, _ := Serialize(m)
+	m2, _ := Parse(out)
+
+	r := m2.Periods[0].AdaptationSets[0].Representations[0]
+	if r.BaseURL != "media-video-hvc1-1.mp4" {
+		t.Errorf("BaseURL = %q, want media-video-hvc1-1.mp4", r.BaseURL)
+	}
+}
+
+func TestSerialize_AudioChannelConfiguration_RoundTrip(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	m, _ := Parse(content)
+	out, _ := Serialize(m)
+	m2, _ := Parse(out)
+
+	r := m2.Periods[0].AdaptationSets[2].Representations[0]
+	if r.AudioChannelConfiguration == nil {
+		t.Fatal("AudioChannelConfiguration is nil after round-trip")
+	}
+	if r.AudioChannelConfiguration.Value != "2" {
+		t.Errorf("Value = %q, want 2", r.AudioChannelConfiguration.Value)
+	}
+}
+
+func TestSerialize_AdaptationSetLabel(t *testing.T) {
+	m := &MPD{
+		Periods: []Period{{
+			AdaptationSets: []AdaptationSet{{
+				MimeType: "video/mp4",
+				Name:     "Main Video",
+				Representations: []Representation{{
+					ID: "v1", Bandwidth: 1000000, Codecs: "avc1.64001F",
+				}},
+			}},
+		}},
+	}
+	out, err := Serialize(m)
+	if err != nil {
+		t.Fatalf("Serialize error: %v", err)
+	}
+	if !strings.Contains(out, `label="Main Video"`) {
+		t.Errorf("output missing label attribute:\n%s", out)
+	}
+}
+
+func TestSerialize_AdaptationSetRole(t *testing.T) {
+	m := &MPD{
+		Periods: []Period{{
+			AdaptationSets: []AdaptationSet{{
+				MimeType: "audio/mp4",
+				Roles:    []Role{{SchemeIDURI: "urn:mpeg:dash:role:2011", Value: "main"}},
+				Representations: []Representation{{
+					ID: "a1", Bandwidth: 128000,
+				}},
+			}},
+		}},
+	}
+	out, err := Serialize(m)
+	if err != nil {
+		t.Fatalf("Serialize error: %v", err)
+	}
+	if !strings.Contains(out, `schemeIdUri="urn:mpeg:dash:role:2011"`) {
+		t.Errorf("output missing Role schemeIdUri:\n%s", out)
+	}
+	if !strings.Contains(out, `value="main"`) {
+		t.Errorf("output missing Role value:\n%s", out)
+	}
+}

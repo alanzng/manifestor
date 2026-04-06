@@ -84,6 +84,8 @@ func convertAdaptationSetParams(p AdaptationSetParams) AdaptationSet {
 		ContentType: p.ContentType,
 		MimeType:    p.MimeType,
 		Lang:        p.Lang,
+		Name:        p.Name,
+		Roles:       append([]Role(nil), p.Roles...),
 	}
 
 	// Infer ContentType from MimeType if not explicitly set.

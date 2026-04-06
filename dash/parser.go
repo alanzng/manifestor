@@ -31,20 +31,34 @@ type xmlAdaptation struct {
 	Codecs          string              `xml:"codecs,attr"`
 	Lang            string              `xml:"lang,attr"`
 	StartWithSAP    string              `xml:"startWithSAP,attr"`
+	Label           string              `xml:"label,attr"`
+	Roles           []xmlRole           `xml:"Role"`
 	SegmentTemplate *xmlSegmentTemplate `xml:"SegmentTemplate"`
 	SegmentBase     *xmlSegmentBase     `xml:"SegmentBase"`
 	Representations []xmlRepresentation `xml:"Representation"`
 }
 
+type xmlRole struct {
+	SchemeIDURI string `xml:"schemeIdUri,attr"`
+	Value       string `xml:"value,attr"`
+}
+
+type xmlAudioChannelConfiguration struct {
+	SchemeIDURI string `xml:"schemeIdUri,attr"`
+	Value       string `xml:"value,attr"`
+}
+
 type xmlRepresentation struct {
-	ID           string `xml:"id,attr"`
-	Bandwidth    string `xml:"bandwidth,attr"`
-	Codecs       string `xml:"codecs,attr"`
-	Width        string `xml:"width,attr"`
-	Height       string `xml:"height,attr"`
-	FrameRate    string `xml:"frameRate,attr"`
-	MimeType     string `xml:"mimeType,attr"`
-	StartWithSAP string `xml:"startWithSAP,attr"`
+	ID                        string                         `xml:"id,attr"`
+	Bandwidth                 string                         `xml:"bandwidth,attr"`
+	Codecs                    string                         `xml:"codecs,attr"`
+	Width                     string                         `xml:"width,attr"`
+	Height                    string                         `xml:"height,attr"`
+	FrameRate                 string                         `xml:"frameRate,attr"`
+	MimeType                  string                         `xml:"mimeType,attr"`
+	StartWithSAP              string                         `xml:"startWithSAP,attr"`
+	BaseURL                   string                         `xml:"BaseURL"`
+	AudioChannelConfiguration *xmlAudioChannelConfiguration  `xml:"AudioChannelConfiguration"`
 }
 
 type xmlSegmentTemplate struct {
@@ -101,6 +115,10 @@ func convertAdaptation(xa xmlAdaptation) AdaptationSet {
 		ContentType: xa.ContentType,
 		MimeType:    xa.MimeType,
 		Lang:        xa.Lang,
+		Name:        xa.Label,
+	}
+	for _, xr := range xa.Roles {
+		as.Roles = append(as.Roles, Role(xr))
 	}
 
 	if xa.SegmentTemplate != nil {
@@ -131,7 +149,7 @@ func convertAdaptation(xa xmlAdaptation) AdaptationSet {
 }
 
 func convertRepresentation(xr xmlRepresentation) Representation {
-	return Representation{
+	r := Representation{
 		ID:           xr.ID,
 		Bandwidth:    atoi(xr.Bandwidth),
 		Codecs:       xr.Codecs,
@@ -140,7 +158,15 @@ func convertRepresentation(xr xmlRepresentation) Representation {
 		FrameRate:    xr.FrameRate,
 		MimeType:     xr.MimeType,
 		StartWithSAP: atoi(xr.StartWithSAP),
+		BaseURL:      xr.BaseURL,
 	}
+	if xr.AudioChannelConfiguration != nil {
+		r.AudioChannelConfiguration = &AudioChannelConfiguration{
+			SchemeIDURI: xr.AudioChannelConfiguration.SchemeIDURI,
+			Value:       xr.AudioChannelConfiguration.Value,
+		}
+	}
+	return r
 }
 
 func convertSegmentTemplate(x *xmlSegmentTemplate) *SegmentTemplate {
