@@ -112,28 +112,11 @@ func (b *MasterBuilder) Build() (string, error) {
 	}
 
 	for _, v := range b.variants {
-		p.Variants = append(p.Variants, Variant{
-			URI:              v.URI,
-			Bandwidth:        v.Bandwidth,
-			AverageBandwidth: v.AverageBandwidth,
-			Codecs:           v.Codecs,
-			Width:            v.Width,
-			Height:           v.Height,
-			FrameRate:        v.FrameRate,
-			AudioGroupID:     v.AudioGroupID,
-			SubtitleGroupID:  v.SubtitleGroupID,
-			HDCPLevel:        v.HDCPLevel,
-		})
+		p.Variants = append(p.Variants, Variant(v))
 	}
 
 	for _, f := range b.iframes {
-		p.IFrames = append(p.IFrames, IFrameStream{
-			URI:       f.URI,
-			Bandwidth: f.Bandwidth,
-			Codecs:    f.Codecs,
-			Width:     f.Width,
-			Height:    f.Height,
-		})
+		p.IFrames = append(p.IFrames, IFrameStream(f))
 	}
 
 	return Serialize(p)
