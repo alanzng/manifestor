@@ -1,0 +1,75 @@
+<?xml version="1.0" ?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" minBufferTime="PT4.00S" mediaPresentationDuration="PT1H22M24.040S" type="static">
+    <!-- Created with Bento4 mp4-dash.py, VERSION=2.0.0-639 -->
+    <Period>
+        <!-- Video -->
+        <AdaptationSet mimeType="video/mp4" segmentAlignment="true" startWithSAP="1" maxWidth="3840" maxHeight="2160" subsegmentAlignment="true" subsegmentStartsWithSAP="1">
+            <Representation id="video-hvc1-1" codecs="hvc1.1.2.L120.90" width="1280" height="720" scanType="progressive" frameRate="50" bandwidth="2455725">
+                <BaseURL>media-video-hvc1-1.mp4</BaseURL>
+                <SegmentBase indexRange="914-15789">
+                    <Initialization range="0-913"/>
+                </SegmentBase>
+            </Representation>
+            <Representation id="video-hvc1-2" codecs="hvc1.1.2.L123.90" width="1920" height="1080" scanType="progressive" frameRate="50" bandwidth="5541941">
+                <BaseURL>media-video-hvc1-2.mp4</BaseURL>
+                <SegmentBase indexRange="915-15790">
+                    <Initialization range="0-914"/>
+                </SegmentBase>
+            </Representation>
+            <Representation id="video-hvc1-3" codecs="hvc1.1.2.L93.90" width="854" height="480" scanType="progressive" frameRate="50" bandwidth="757752">
+                <BaseURL>media-video-hvc1-3.mp4</BaseURL>
+                <SegmentBase indexRange="912-15787">
+                    <Initialization range="0-911"/>
+                </SegmentBase>
+            </Representation>
+            <Representation id="video-hvc1-4" codecs="hvc1.1.2.L150.90" width="2560" height="1440" scanType="progressive" frameRate="50" bandwidth="8638946">
+                <BaseURL>media-video-hvc1-4.mp4</BaseURL>
+                <SegmentBase indexRange="913-15788">
+                    <Initialization range="0-912"/>
+                </SegmentBase>
+            </Representation>
+            <Representation id="video-hvc1-5" codecs="hvc1.1.2.L153.90" width="3840" height="2160" scanType="progressive" frameRate="50" bandwidth="21552440">
+                <BaseURL>media-video-hvc1-5.mp4</BaseURL>
+                <SegmentBase indexRange="917-15792">
+                    <Initialization range="0-916"/>
+                </SegmentBase>
+            </Representation>
+        </AdaptationSet>
+        <AdaptationSet mimeType="video/mp4" segmentAlignment="true" startWithSAP="1" maxWidth="1920" maxHeight="1080" subsegmentAlignment="true" subsegmentStartsWithSAP="1">
+            <Representation id="video-avc1-1" codecs="avc1.640028" width="1920" height="1080" scanType="progressive" frameRate="25" bandwidth="4616502">
+                <BaseURL>media-video-avc1-1.mp4</BaseURL>
+                <SegmentBase indexRange="832-15707">
+                    <Initialization range="0-831"/>
+                </SegmentBase>
+            </Representation>
+            <Representation id="video-avc1-2" codecs="avc1.64001F" width="1280" height="720" scanType="progressive" frameRate="25" bandwidth="2363259">
+                <BaseURL>media-video-avc1-2.mp4</BaseURL>
+                <SegmentBase indexRange="829-15704">
+                    <Initialization range="0-828"/>
+                </SegmentBase>
+            </Representation>
+            <Representation id="video-avc1-3" codecs="avc1.4D401E" width="640" height="360" scanType="progressive" frameRate="25" bandwidth="930116">
+                <BaseURL>media-video-avc1-3.mp4</BaseURL>
+                <SegmentBase indexRange="824-15699">
+                    <Initialization range="0-823"/>
+                </SegmentBase>
+            </Representation>
+            <Representation id="video-avc1-4" codecs="avc1.4D401E" width="854" height="480" scanType="progressive" frameRate="25" bandwidth="1528065">
+                <BaseURL>media-video-avc1-4.mp4</BaseURL>
+                <SegmentBase indexRange="824-15699">
+                    <Initialization range="0-823"/>
+                </SegmentBase>
+            </Representation>
+        </AdaptationSet>
+        <!-- Audio -->
+        <AdaptationSet mimeType="audio/mp4" startWithSAP="1" segmentAlignment="true" lang="tg" subsegmentAlignment="true" subsegmentStartsWithSAP="1">
+            <Representation id="audio-tg-mp4a.40.2" codecs="mp4a.40.2" bandwidth="197665" audioSamplingRate="48000">
+                <AudioChannelConfiguration schemeIdUri="urn:mpeg:mpegB:cicp:ChannelConfiguration" value="2"/>
+                <BaseURL>media-audio-tg-mp4a.40.2.mp4</BaseURL>
+                <SegmentBase indexRange="627-15502">
+                    <Initialization range="0-626"/>
+                </SegmentBase>
+            </Representation>
+        </AdaptationSet>
+    </Period>
+</MPD>
