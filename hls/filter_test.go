@@ -470,3 +470,84 @@ func BenchmarkFilter_ParseFilterSerialize(b *testing.B) {
 }
 
 // mustReadFixture is defined in parser_test.go; shared across all test files in package.
+
+// ---- Inject options ----
+
+func TestFilter_WithInjectVariant(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	p0, _ := Parse(content)
+	original := len(p0.Variants)
+
+	out, err := Filter(content, WithInjectVariant(VariantParams{
+		URI:       "https://cdn.example.com/4k.m3u8",
+		Bandwidth: 8000000,
+		Codecs:    "avc1.640033",
+		Width:     3840,
+		Height:    2160,
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	p, _ := Parse(out)
+	if len(p.Variants) != original+1 {
+		t.Errorf("Variants = %d, want %d", len(p.Variants), original+1)
+	}
+	last := p.Variants[len(p.Variants)-1]
+	if last.URI != "https://cdn.example.com/4k.m3u8" {
+		t.Errorf("injected URI = %q", last.URI)
+	}
+	if last.Bandwidth != 8000000 {
+		t.Errorf("injected Bandwidth = %d", last.Bandwidth)
+	}
+}
+
+func TestFilter_WithInjectAudioTrack(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	p0, _ := Parse(content)
+	original := len(p0.AudioTracks)
+
+	out, err := Filter(content, WithInjectAudioTrack(AudioTrackParams{
+		GroupID:  "audio",
+		Name:     "French",
+		Language: "fr",
+		URI:      "fr/audio.m3u8",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	p, _ := Parse(out)
+	if len(p.AudioTracks) != original+1 {
+		t.Errorf("AudioTracks = %d, want %d", len(p.AudioTracks), original+1)
+	}
+	injected := p.AudioTracks[len(p.AudioTracks)-1]
+	if injected.Language != "fr" {
+		t.Errorf("injected Language = %q, want fr", injected.Language)
+	}
+}
+
+func TestFilter_WithInjectSubtitle(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	p0, _ := Parse(content)
+	original := len(p0.Subtitles)
+
+	out, err := Filter(content, WithInjectSubtitle(SubtitleTrackParams{
+		GroupID:  "subs",
+		Name:     "English",
+		Language: "en",
+		URI:      "en/subs.m3u8",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	p, _ := Parse(out)
+	if len(p.Subtitles) != original+1 {
+		t.Errorf("Subtitles = %d, want %d", len(p.Subtitles), original+1)
+	}
+	injected := p.Subtitles[len(p.Subtitles)-1]
+	if injected.Language != "en" {
+		t.Errorf("injected Language = %q, want en", injected.Language)
+	}
+	if injected.URI != "en/subs.m3u8" {
+		t.Errorf("injected URI = %q", injected.URI)
+	}
+}
