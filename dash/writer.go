@@ -140,15 +140,15 @@ type xmlOutAdaptation struct {
 }
 
 type xmlOutRepresentation struct {
-	ID                        string                            `xml:"id,attr,omitempty"`
-	Bandwidth                 int                               `xml:"bandwidth,attr"`
-	Codecs                    string                            `xml:"codecs,attr,omitempty"`
-	Width                     int                               `xml:"width,attr,omitempty"`
-	Height                    int                               `xml:"height,attr,omitempty"`
-	FrameRate                 string                            `xml:"frameRate,attr,omitempty"`
-	MimeType                  string                            `xml:"mimeType,attr,omitempty"`
-	BaseURL                   string                            `xml:"BaseURL,omitempty"`
-	AudioChannelConfiguration *xmlOutAudioChannelConfiguration  `xml:"AudioChannelConfiguration,omitempty"`
+	ID                        string                           `xml:"id,attr,omitempty"`
+	Bandwidth                 int                              `xml:"bandwidth,attr"`
+	Codecs                    string                           `xml:"codecs,attr,omitempty"`
+	Width                     int                              `xml:"width,attr,omitempty"`
+	Height                    int                              `xml:"height,attr,omitempty"`
+	FrameRate                 string                           `xml:"frameRate,attr,omitempty"`
+	MimeType                  string                           `xml:"mimeType,attr,omitempty"`
+	BaseURL                   string                           `xml:"BaseURL,omitempty"`
+	AudioChannelConfiguration *xmlOutAudioChannelConfiguration `xml:"AudioChannelConfiguration,omitempty"`
 }
 
 type xmlOutSegmentTemplate struct {

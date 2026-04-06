@@ -49,16 +49,16 @@ type xmlAudioChannelConfiguration struct {
 }
 
 type xmlRepresentation struct {
-	ID                        string                         `xml:"id,attr"`
-	Bandwidth                 string                         `xml:"bandwidth,attr"`
-	Codecs                    string                         `xml:"codecs,attr"`
-	Width                     string                         `xml:"width,attr"`
-	Height                    string                         `xml:"height,attr"`
-	FrameRate                 string                         `xml:"frameRate,attr"`
-	MimeType                  string                         `xml:"mimeType,attr"`
-	StartWithSAP              string                         `xml:"startWithSAP,attr"`
-	BaseURL                   string                         `xml:"BaseURL"`
-	AudioChannelConfiguration *xmlAudioChannelConfiguration  `xml:"AudioChannelConfiguration"`
+	ID                        string                        `xml:"id,attr"`
+	Bandwidth                 string                        `xml:"bandwidth,attr"`
+	Codecs                    string                        `xml:"codecs,attr"`
+	Width                     string                        `xml:"width,attr"`
+	Height                    string                        `xml:"height,attr"`
+	FrameRate                 string                        `xml:"frameRate,attr"`
+	MimeType                  string                        `xml:"mimeType,attr"`
+	StartWithSAP              string                        `xml:"startWithSAP,attr"`
+	BaseURL                   string                        `xml:"BaseURL"`
+	AudioChannelConfiguration *xmlAudioChannelConfiguration `xml:"AudioChannelConfiguration"`
 }
 
 type xmlSegmentTemplate struct {
