@@ -4,21 +4,21 @@ package dash
 type Option func(*filterConfig)
 
 type filterConfig struct {
-	codec          string
-	maxWidth       int
-	maxHeight      int
-	minWidth       int
-	minHeight      int
-	exactWidth     int
-	exactHeight    int
-	maxBandwidth   int
-	minBandwidth   int
-	maxFrameRate   float64
-	audioLanguage  string
-	mimeType       string
-	cdnBaseURL     string
-	absoluteOrigin string
-	authToken      string
+	codec           string
+	maxWidth        int
+	maxHeight       int
+	minWidth        int
+	minHeight       int
+	exactWidth      int
+	exactHeight     int
+	maxBandwidth    int
+	minBandwidth    int
+	maxFrameRate    float64
+	audioLanguage   string
+	mimeType        string
+	cdnBaseURL      string
+	absoluteOrigin  string
+	authToken       string
 	customFilter    func(*Representation) bool
 	customTransform func(*Representation)
 }

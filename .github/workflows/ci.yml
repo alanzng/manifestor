@@ -44,6 +44,23 @@ jobs:
       - name: Run benchmarks
         run: go test -bench=. -benchmem -run='^$' ./...
 
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Check gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "The following files are not gofmt'd:"
+            echo "$unformatted"
+            exit 1
+          fi
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

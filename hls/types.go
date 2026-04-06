@@ -50,8 +50,8 @@ type IFrameStream struct {
 
 // VariantParams holds the parameters for building a video variant.
 type VariantParams struct {
-	URI              string  // required
-	Bandwidth        int     // required
+	URI              string // required
+	Bandwidth        int    // required
 	AverageBandwidth int
 	Codecs           string
 	Width            int

@@ -3,7 +3,7 @@ package manifest
 // sharedOption is embedded by all unified option types so they satisfy Option.
 type sharedOption struct{}
 
-func (sharedOption) hlsOption() bool  { return true }
+func (sharedOption) hlsOption() bool { return true }
 func (sharedOption) dashOption() bool { return true }
 
 // codecOption implements WithCodec.
