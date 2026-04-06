@@ -27,10 +27,11 @@ jobs:
       - name: Test (with race detector)
         run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
 
-      - name: Upload coverage
+      - name: Upload coverage reports to Codecov
         if: matrix.go == '1.22'
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.out
 
   bench:
