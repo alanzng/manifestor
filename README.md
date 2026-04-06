@@ -1,8 +1,8 @@
 # manifestor
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/alannguyen/manifestor.svg)](https://pkg.go.dev/github.com/alannguyen/manifestor)
-[![CI](https://github.com/alannguyen/manifestor/actions/workflows/ci.yml/badge.svg)](https://github.com/alannguyen/manifestor/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/alannguyen/manifestor)](https://goreportcard.com/report/github.com/alannguyen/manifestor)
+[![Go Reference](https://pkg.go.dev/badge/github.com/alanzng/manifestor.svg)](https://pkg.go.dev/github.com/alanzng/manifestor)
+[![CI](https://github.com/alanzng/manifestor/actions/workflows/ci.yml/badge.svg)](https://github.com/alanzng/manifestor/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/alanzng/manifestor)](https://goreportcard.com/report/github.com/alanzng/manifestor)
 [![Coverage](https://codecov.io/gh/alannguyen/manifestor/branch/main/graph/badge.svg)](https://codecov.io/gh/alannguyen/manifestor)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -29,13 +29,13 @@ Parse, filter, build, and transform HLS & DASH manifests in Go. Zero dependencie
 ### Library
 
 ```bash
-go get github.com/alannguyen/manifestor
+go get github.com/alanzng/manifestor
 ```
 
 ### CLI
 
 ```bash
-go install github.com/alannguyen/manifestor/cmd/manifestor@latest
+go install github.com/alanzng/manifestor/cmd/manifestor@latest
 ```
 
 ### Docker
@@ -51,7 +51,7 @@ docker pull ghcr.io/alannguyen/manifestor:latest
 ### Filter an HLS manifest
 
 ```go
-import "github.com/alannguyen/manifestor/manifest"
+import "github.com/alanzng/manifestor/manifest"
 
 filtered, err := manifest.Filter(content,
     manifest.WithCodec("h264"),
@@ -73,7 +73,7 @@ filtered, err := manifest.FilterFromURL("https://example.com/master.m3u8",
 ### Build an HLS Master Playlist
 
 ```go
-import "github.com/alannguyen/manifestor/hls"
+import "github.com/alanzng/manifestor/hls"
 
 b := hls.NewMasterBuilder()
 b.SetVersion(6).
@@ -110,7 +110,7 @@ playlist, err := b.Build()
 ### Build a DASH MPD
 
 ```go
-import "github.com/alannguyen/manifestor/dash"
+import "github.com/alanzng/manifestor/dash"
 
 b := dash.NewMPDBuilder(dash.MPDConfig{
     Profile:       "isoff-on-demand",

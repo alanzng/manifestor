@@ -14,4 +14,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/alannguyen/manifestor/compare/HEAD...HEAD
+[Unreleased]: https://github.com/alanzng/manifestor/compare/HEAD...HEAD
