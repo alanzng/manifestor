@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="urn:mpeg:dash:schema:mpd:2011 http://standards.iso.org/ittf/PubliclyAvailableStandards/MPEG-DASH_schema_files/DASH-MPD.xsd"
+     type="static"
+     mediaPresentationDuration="PT1M30.0S"
+     minBufferTime="PT2S"
+     profiles="urn:mpeg:dash:profile:isoff-on-demand:2011">
+
+  <Period>
+
+    <AdaptationSet id="1" group="1" profiles="ccff" bitstreamSwitching="false"
+                   segmentAlignment="true" contentType="video" mimeType="video/mp4"
+                   codecs="avc1.640028" maxWidth="1920" maxHeight="1080" startWithSAP="1">
+      <SegmentTemplate timescale="10000000" media="QualityLevels($Bandwidth$)/Fragments(video=$Time$,format=mpd-time-csf)"
+                        initialization="QualityLevels($Bandwidth$)/Fragments(video=i,format=mpd-time-csf)"/>
+      <Representation id="1_V_video_1" bandwidth="4500000" width="1920" height="1080"/>
+      <Representation id="1_V_video_2" bandwidth="2200000" width="1280" height="720"/>
+      <Representation id="1_V_video_3" bandwidth="1200000" width="960"  height="540"/>
+      <Representation id="1_V_video_4" bandwidth="700000"  width="640"  height="360"/>
+    </AdaptationSet>
+
+    <AdaptationSet id="2" group="5" profiles="ccff" bitstreamSwitching="false"
+                   segmentAlignment="true" contentType="audio" mimeType="audio/mp4"
+                   codecs="mp4a.40.2" lang="en">
+      <SegmentTemplate timescale="10000000" media="QualityLevels($Bandwidth$)/Fragments(audio=$Time$,format=mpd-time-csf)"
+                        initialization="QualityLevels($Bandwidth$)/Fragments(audio=i,format=mpd-time-csf)"/>
+      <Representation id="5_A_audio_1" bandwidth="128000" audioSamplingRate="44100"/>
+    </AdaptationSet>
+
+  </Period>
+</MPD>
