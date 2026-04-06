@@ -1,5 +1,10 @@
 package manifest
 
+import (
+	"github.com/alanzng/manifestor/dash"
+	"github.com/alanzng/manifestor/hls"
+)
+
 // sharedOption is embedded by all unified option types so they satisfy Option.
 type sharedOption struct{}
 
@@ -114,3 +119,86 @@ type authTokenOption struct {
 
 // WithAuthToken appends token as a query string parameter to all URIs.
 func WithAuthToken(token string) Option { return authTokenOption{token: token} }
+
+// ---- HLS build-only options ----
+
+// hlsOnlyOption is embedded by HLS-only build options.
+type hlsOnlyOption struct{}
+
+func (hlsOnlyOption) hlsOption() bool  { return true }
+func (hlsOnlyOption) dashOption() bool { return false }
+
+// hlsVersionOption sets the HLS playlist version.
+type hlsVersionOption struct {
+	hlsOnlyOption
+	version int
+}
+
+// WithHLSVersion sets the #EXT-X-VERSION value in the built HLS playlist.
+func WithHLSVersion(v int) Option { return hlsVersionOption{version: v} }
+
+// hlsVariantOption adds a variant stream to the HLS playlist.
+type hlsVariantOption struct {
+	hlsOnlyOption
+	params hls.VariantParams
+}
+
+// WithHLSVariant adds a video variant stream to the built HLS Master Playlist.
+func WithHLSVariant(p hls.VariantParams) Option { return hlsVariantOption{params: p} }
+
+// hlsAudioTrackOption adds an audio track to the HLS playlist.
+type hlsAudioTrackOption struct {
+	hlsOnlyOption
+	params hls.AudioTrackParams
+}
+
+// WithHLSAudioTrack adds an #EXT-X-MEDIA AUDIO entry to the built HLS playlist.
+func WithHLSAudioTrack(p hls.AudioTrackParams) Option { return hlsAudioTrackOption{params: p} }
+
+// hlsSubtitleTrackOption adds a subtitle track to the HLS playlist.
+type hlsSubtitleTrackOption struct {
+	hlsOnlyOption
+	params hls.SubtitleTrackParams
+}
+
+// WithHLSSubtitleTrack adds an #EXT-X-MEDIA SUBTITLES entry to the built HLS playlist.
+func WithHLSSubtitleTrack(p hls.SubtitleTrackParams) Option {
+	return hlsSubtitleTrackOption{params: p}
+}
+
+// hlsIFrameOption adds an I-frame stream to the HLS playlist.
+type hlsIFrameOption struct {
+	hlsOnlyOption
+	params hls.IFrameParams
+}
+
+// WithHLSIFrameStream adds an #EXT-X-I-FRAME-STREAM-INF entry to the built HLS playlist.
+func WithHLSIFrameStream(p hls.IFrameParams) Option { return hlsIFrameOption{params: p} }
+
+// ---- DASH build-only options ----
+
+// dashOnlyOption is embedded by DASH-only build options.
+type dashOnlyOption struct{}
+
+func (dashOnlyOption) hlsOption() bool  { return false }
+func (dashOnlyOption) dashOption() bool { return true }
+
+// dashConfigOption sets the top-level MPD configuration.
+type dashConfigOption struct {
+	dashOnlyOption
+	cfg dash.MPDConfig
+}
+
+// WithDASHConfig sets the top-level MPD configuration for the built DASH manifest.
+func WithDASHConfig(cfg dash.MPDConfig) Option { return dashConfigOption{cfg: cfg} }
+
+// dashAdaptationSetOption adds an AdaptationSet to the DASH MPD.
+type dashAdaptationSetOption struct {
+	dashOnlyOption
+	params dash.AdaptationSetParams
+}
+
+// WithDASHAdaptationSet adds an AdaptationSet to the built DASH MPD.
+func WithDASHAdaptationSet(p dash.AdaptationSetParams) Option {
+	return dashAdaptationSetOption{params: p}
+}
