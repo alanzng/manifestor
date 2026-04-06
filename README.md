@@ -372,7 +372,7 @@ Tested against real-world output from:
 
 | | Company |
 |---|---|
-| [![Vieon](docs/vieon-logo.svg)](https://vieon.vn/) | [Vieon](https://vieon.vn/) — Vietnam's leading OTT streaming platform |
+| [![Vieon](docs/vieon-logo-light.svg)](https://vieon.vn/) | [Vieon](https://vieon.vn/) — Vietnam's leading OTT streaming platform |
 
 ---
 
