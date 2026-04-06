@@ -3,6 +3,7 @@ package dash
 import (
 	"errors"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -373,4 +374,102 @@ func mustReadFixtureB(b *testing.B, path string) string {
 		b.Fatalf("read fixture %s: %v", path, err)
 	}
 	return string(data)
+}
+
+// ---- BaseURL URI transformers ----
+
+func TestFilter_WithAbsoluteURIs(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	out, err := Filter(content, WithAbsoluteURIs("https://cdn.example.com/videos/"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	r := m.Periods[0].AdaptationSets[0].Representations[0]
+	if r.BaseURL != "https://cdn.example.com/videos/media-video-hvc1-1.mp4" {
+		t.Errorf("BaseURL = %q", r.BaseURL)
+	}
+}
+
+func TestFilter_WithCDNBaseURL(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	// First make absolute, then rewrite CDN.
+	out, err := Filter(content,
+		WithAbsoluteURIs("https://origin.example.com/"),
+		WithCDNBaseURL("https://cdn.example.com"),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	r := m.Periods[0].AdaptationSets[0].Representations[0]
+	if !strings.HasPrefix(r.BaseURL, "https://cdn.example.com") {
+		t.Errorf("BaseURL not rewritten to CDN: %q", r.BaseURL)
+	}
+}
+
+func TestFilter_WithAuthToken(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	out, err := Filter(content,
+		WithAbsoluteURIs("https://cdn.example.com/"),
+		WithAuthToken("abc123"),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	r := m.Periods[0].AdaptationSets[0].Representations[0]
+	if !strings.Contains(r.BaseURL, "token=abc123") {
+		t.Errorf("BaseURL missing token: %q", r.BaseURL)
+	}
+}
+
+func TestFilter_WithCDNBaseURL_RelativeURI(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	out, err := Filter(content, WithCDNBaseURL("https://cdn.example.com/path"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	r := m.Periods[0].AdaptationSets[0].Representations[0]
+	if !strings.HasPrefix(r.BaseURL, "https://cdn.example.com") {
+		t.Errorf("BaseURL = %q", r.BaseURL)
+	}
+}
+
+// ---- WithInjectAdaptationSet ----
+
+func TestFilter_WithInjectAdaptationSet(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	m0, _ := Parse(content)
+	originalCount := len(m0.Periods[0].AdaptationSets)
+
+	subtitle := AdaptationSetParams{
+		MimeType: "text/vtt",
+		Lang:     "en",
+		Roles:    []Role{{SchemeIDURI: "urn:mpeg:dash:role:2011", Value: "subtitle"}},
+		Representations: []RepresentationParams{
+			{ID: "sub-en", Bandwidth: 10000, BaseURL: "https://cdn.example.com/sub-en.vtt"},
+		},
+	}
+	out, err := Filter(content, WithInjectAdaptationSet(subtitle))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	got := len(m.Periods[0].AdaptationSets)
+	if got != originalCount+1 {
+		t.Errorf("AdaptationSets = %d, want %d", got, originalCount+1)
+	}
+	// Injected set is last.
+	injected := m.Periods[0].AdaptationSets[got-1]
+	if injected.Lang != "en" {
+		t.Errorf("injected Lang = %q, want en", injected.Lang)
+	}
+	if len(injected.Representations) != 1 {
+		t.Fatalf("injected Representations = %d, want 1", len(injected.Representations))
+	}
+	if injected.Representations[0].BaseURL != "https://cdn.example.com/sub-en.vtt" {
+		t.Errorf("injected BaseURL = %q", injected.Representations[0].BaseURL)
+	}
 }
