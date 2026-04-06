@@ -679,3 +679,25 @@ func TestFilter_DASHInjectIgnoredForHLS(t *testing.T) {
 		t.Errorf("unexpected error for HLS content with DASH inject option: %v", err)
 	}
 }
+
+func TestFilter_WithHLSVariantSubtitleGroup(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	out, err := Filter(content, WithHLSVariantSubtitleGroup("subs"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	p, _ := hls.Parse(out)
+	for _, v := range p.Variants {
+		if v.SubtitleGroupID != "subs" {
+			t.Errorf("variant %s SubtitleGroupID = %q, want subs", v.URI, v.SubtitleGroupID)
+		}
+	}
+}
+
+func TestFilter_WithHLSVariantSubtitleGroup_IgnoredForDASH(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	_, err := Filter(content, WithHLSVariantSubtitleGroup("subs"))
+	if err != nil {
+		t.Errorf("unexpected error for DASH content with HLS subtitle group option: %v", err)
+	}
+}
