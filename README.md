@@ -368,7 +368,7 @@ Tested against real-world output from:
 
 ---
 
-## Used By
+## Who is using manifestor
 
 | | Company |
 |---|---|
