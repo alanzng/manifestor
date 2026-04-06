@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="urn:mpeg:dash:schema:mpd:2011 DASH-MPD.xsd"
+     type="dynamic"
+     availabilityStartTime="2026-04-06T00:00:00Z"
+     minimumUpdatePeriod="PT2S"
+     minBufferTime="PT4S"
+     timeShiftBufferDepth="PT30M"
+     profiles="urn:mpeg:dash:profile:isoff-live:2011">
+
+  <Period id="1" start="PT0S">
+
+    <AdaptationSet id="1" contentType="video" mimeType="video/mp4" segmentAlignment="true" startWithSAP="1">
+      <SegmentTemplate initialization="$RepresentationID$/init.mp4"
+                        media="$RepresentationID$/$Number$.m4s"
+                        timescale="90000"
+                        duration="180000"
+                        startNumber="1"/>
+      <Representation id="v1" bandwidth="4000000" codecs="avc1.640028" width="1920" height="1080" frameRate="25"/>
+      <Representation id="v2" bandwidth="2000000" codecs="avc1.4d401f" width="1280" height="720"  frameRate="25"/>
+      <Representation id="v3" bandwidth="900000"  codecs="avc1.4d401e" width="854"  height="480"  frameRate="25"/>
+    </AdaptationSet>
+
+    <AdaptationSet id="2" contentType="audio" mimeType="audio/mp4" lang="en">
+      <SegmentTemplate initialization="$RepresentationID$/init.mp4"
+                        media="$RepresentationID$/$Number$.m4s"
+                        timescale="44100"
+                        duration="88200"
+                        startNumber="1"/>
+      <Representation id="a1" bandwidth="128000" codecs="mp4a.40.2"/>
+    </AdaptationSet>
+
+    <AdaptationSet id="3" contentType="audio" mimeType="audio/mp4" lang="fr">
+      <SegmentTemplate initialization="$RepresentationID$/init.mp4"
+                        media="$RepresentationID$/$Number$.m4s"
+                        timescale="44100"
+                        duration="88200"
+                        startNumber="1"/>
+      <Representation id="a2" bandwidth="128000" codecs="mp4a.40.2"/>
+    </AdaptationSet>
+
+  </Period>
+</MPD>

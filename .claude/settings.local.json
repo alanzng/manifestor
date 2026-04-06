@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gofmt -w hls/options.go hls/types.go dash/options.go)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"fix: resolve golangci-lint config and gofmt formatting issues:*)"
+    ]
+  }
+}

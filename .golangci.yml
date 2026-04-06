@@ -1,0 +1,27 @@
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+    - revive
+    - noctx
+    - bodyclose
+
+linters-settings:
+  revive:
+    rules:
+      - name: exported
+        severity: warning
+  godot:
+    scope: declarations
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - godot
