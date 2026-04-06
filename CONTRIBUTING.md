@@ -35,7 +35,7 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
    ```
 3. Add the upstream remote:
    ```bash
-   git remote add upstream https://github.com/alannguyen/manifestor.git
+   git remote add upstream https://github.com/alanzng/manifestor.git
    ```
 
 ---
@@ -90,7 +90,7 @@ manifestor/
 
 ### Bug fixes
 
-1. Check existing [issues](https://github.com/alannguyen/manifestor/issues) to avoid duplicates.
+1. Check existing [issues](https://github.com/alanzng/manifestor/issues) to avoid duplicates.
 2. Open a new issue describing the bug (or pick an existing one).
 3. Create a branch: `git checkout -b fix/<short-description>`
 4. Write a failing test that reproduces the bug.
@@ -99,7 +99,7 @@ manifestor/
 
 ### New features
 
-1. Open a [feature request issue](https://github.com/alannguyen/manifestor/issues/new?template=feature_request.md) first to discuss the design.
+1. Open a [feature request issue](https://github.com/alanzng/manifestor/issues/new?template=feature_request.md) first to discuss the design.
 2. Wait for maintainer feedback before investing significant time.
 3. Create a branch: `git checkout -b feat/<short-description>`
 4. Implement the feature with tests.
