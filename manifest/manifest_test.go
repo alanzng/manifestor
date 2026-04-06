@@ -286,6 +286,282 @@ func TestBuild_InvalidFormat(t *testing.T) {
 	}
 }
 
+// ---- Filter HLS — resolution / framerate / CDN / token options (toHLSOpts coverage) ----
+
+func TestFilter_HLS_MinBandwidth(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_master.m3u8")
+	out, err := Filter(content, WithMinBandwidth(3000000))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	p, _ := hls.Parse(out)
+	for _, v := range p.Variants {
+		if v.Bandwidth < 3000000 {
+			t.Errorf("variant %s bandwidth %d below min", v.URI, v.Bandwidth)
+		}
+	}
+}
+
+func TestFilter_HLS_MaxResolution(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_master.m3u8")
+	out, err := Filter(content, WithMaxResolution(1280, 720))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	p, _ := hls.Parse(out)
+	for _, v := range p.Variants {
+		if v.Width > 1280 || v.Height > 720 {
+			t.Errorf("variant %s resolution %dx%d exceeds max", v.URI, v.Width, v.Height)
+		}
+	}
+}
+
+func TestFilter_HLS_MinResolution(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_master.m3u8")
+	out, err := Filter(content, WithMinResolution(1280, 720))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	p, _ := hls.Parse(out)
+	for _, v := range p.Variants {
+		if v.Width < 1280 || v.Height < 720 {
+			t.Errorf("variant %s resolution %dx%d below min", v.URI, v.Width, v.Height)
+		}
+	}
+}
+
+func TestFilter_HLS_ExactResolution(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_master.m3u8")
+	out, err := Filter(content, WithExactResolution(1920, 1080))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	p, _ := hls.Parse(out)
+	for _, v := range p.Variants {
+		if v.Width != 1920 || v.Height != 1080 {
+			t.Errorf("variant %s resolution %dx%d != 1920x1080", v.URI, v.Width, v.Height)
+		}
+	}
+}
+
+func TestFilter_HLS_MaxFrameRate(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	out, err := Filter(content, WithMaxFrameRate(30))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	p, _ := hls.Parse(out)
+	for _, v := range p.Variants {
+		if v.FrameRate > 30 {
+			t.Errorf("variant %s frameRate %.3f exceeds max 30", v.URI, v.FrameRate)
+		}
+	}
+}
+
+func TestFilter_HLS_AudioLanguage(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_master.m3u8")
+	out, err := Filter(content, WithAudioLanguage("en"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	p, _ := hls.Parse(out)
+	for _, t2 := range p.AudioTracks {
+		if !strings.EqualFold(t2.Language, "en") {
+			t.Errorf("audio track lang %q survived en filter", t2.Language)
+		}
+	}
+}
+
+func TestFilter_HLS_CDNBaseURL(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_master.m3u8")
+	out, err := Filter(content,
+		WithAbsoluteURIs("https://origin.example.com/"),
+		WithCDNBaseURL("https://cdn.example.com"),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "cdn.example.com") {
+		t.Error("CDN rewrite not applied")
+	}
+}
+
+func TestFilter_HLS_AuthToken(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_master.m3u8")
+	out, err := Filter(content,
+		WithAbsoluteURIs("https://origin.example.com/"),
+		WithAuthToken("abc123"),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "token=abc123") {
+		t.Error("auth token not appended")
+	}
+}
+
+// ---- Filter DASH — resolution / framerate / mime / CDN options (toDASHOpts coverage) ----
+
+func TestFilter_DASH_MaxResolution(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/isoff_ondemand.mpd")
+	out, err := Filter(content, WithMaxResolution(1280, 720))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := dash.Parse(out)
+	for _, r := range m.Periods[0].AdaptationSets[0].Representations {
+		if r.Width > 1280 || r.Height > 720 {
+			t.Errorf("rep %s resolution %dx%d exceeds max", r.ID, r.Width, r.Height)
+		}
+	}
+}
+
+func TestFilter_DASH_MinResolution(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/isoff_ondemand.mpd")
+	out, err := Filter(content, WithMinResolution(1280, 720))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := dash.Parse(out)
+	for _, r := range m.Periods[0].AdaptationSets[0].Representations {
+		if r.Width < 1280 || r.Height < 720 {
+			t.Errorf("rep %s resolution %dx%d below min", r.ID, r.Width, r.Height)
+		}
+	}
+}
+
+func TestFilter_DASH_ExactResolution(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/isoff_ondemand.mpd")
+	out, err := Filter(content, WithExactResolution(1920, 1080))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := dash.Parse(out)
+	reps := m.Periods[0].AdaptationSets[0].Representations
+	if len(reps) != 1 || reps[0].Width != 1920 {
+		t.Errorf("expected exactly 1920x1080 rep, got %d reps", len(reps))
+	}
+}
+
+func TestFilter_DASH_MinBandwidth(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/isoff_ondemand.mpd")
+	out, err := Filter(content, WithMinBandwidth(2000000))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := dash.Parse(out)
+	for _, r := range m.Periods[0].AdaptationSets[0].Representations {
+		if r.Bandwidth < 2000000 {
+			t.Errorf("rep %s bandwidth %d below min", r.ID, r.Bandwidth)
+		}
+	}
+}
+
+func TestFilter_DASH_MaxFrameRate(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	out, err := Filter(content, WithMaxFrameRate(30))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := dash.Parse(out)
+	for _, as := range m.Periods[0].AdaptationSets {
+		for _, r := range as.Representations {
+			if r.FrameRate == "50" {
+				t.Errorf("rep %s frameRate 50 survived max 30 filter", r.ID)
+			}
+		}
+	}
+}
+
+func TestFilter_DASH_MimeType(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/isoff_ondemand.mpd")
+	out, err := Filter(content, WithMimeType("video/mp4"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := dash.Parse(out)
+	for _, as := range m.Periods[0].AdaptationSets {
+		if strings.HasPrefix(as.MimeType, "audio/") {
+			t.Error("audio adaptation set survived video/mp4 mime filter")
+		}
+	}
+}
+
+func TestFilter_DASH_CDNBaseURL(t *testing.T) {
+	// CDN rewrite registered but DASH reps have no URI — should not error.
+	content := mustReadFixture(t, "../testdata/dash/isoff_ondemand.mpd")
+	_, err := Filter(content, WithCDNBaseURL("https://cdn.example.com"))
+	if err != nil {
+		t.Errorf("unexpected error with CDN option on DASH: %v", err)
+	}
+}
+
+func TestFilter_DASH_AbsoluteURIs(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/isoff_ondemand.mpd")
+	_, err := Filter(content, WithAbsoluteURIs("https://origin.example.com/"))
+	if err != nil {
+		t.Errorf("unexpected error with AbsoluteURIs option on DASH: %v", err)
+	}
+}
+
+func TestFilter_DASH_AuthToken(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/isoff_ondemand.mpd")
+	_, err := Filter(content, WithAuthToken("tok123"))
+	if err != nil {
+		t.Errorf("unexpected error with AuthToken option on DASH: %v", err)
+	}
+}
+
+// ---- Format-specific options ignored on the other format ----
+// These exercise hlsOnlyOption.dashOption() == false and dashOnlyOption.hlsOption() == false.
+
+func TestFilter_HLS_IgnoresDASHOnlyOptions(t *testing.T) {
+	// DASH-only options (WithDASHConfig, WithDASHAdaptationSet) should be silently
+	// ignored when filtering HLS content — no error, HLS output returned.
+	content := mustReadFixture(t, "../testdata/hls/bento4_master.m3u8")
+	out, err := Filter(content,
+		WithDASHConfig(dash.MPDConfig{Profile: "urn:mpeg:dash:profile:isoff-on-demand:2011"}),
+		WithMaxBandwidth(10000000),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.HasPrefix(out, "#EXTM3U") {
+		t.Error("output is not HLS")
+	}
+}
+
+func TestFilter_DASH_IgnoresHLSOnlyOptions(t *testing.T) {
+	// HLS-only options (WithHLSVariant, WithHLSVersion) should be silently
+	// ignored when filtering DASH content — no error, DASH output returned.
+	content := mustReadFixture(t, "../testdata/dash/isoff_ondemand.mpd")
+	out, err := Filter(content,
+		WithHLSVariant(hls.VariantParams{URI: "v.m3u8", Bandwidth: 1000000}),
+		WithMaxBandwidth(10000000),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "<?xml") {
+		t.Error("output is not DASH XML")
+	}
+}
+
+// ---- Build HLS — IFrameStream (applyHLSBuildOption coverage) ----
+
+func TestBuild_HLS_WithIFrameStream(t *testing.T) {
+	out, err := Build(FormatHLS,
+		WithHLSVariant(hls.VariantParams{URI: "v.m3u8", Bandwidth: 5000000}),
+		WithHLSIFrameStream(hls.IFrameParams{URI: "iframe.m3u8", Bandwidth: 200000}),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "#EXT-X-I-FRAME-STREAM-INF") {
+		t.Error("expected #EXT-X-I-FRAME-STREAM-INF in output")
+	}
+}
+
 // ---- helpers ----
 
 func mustReadFixture(t *testing.T, path string) string {
