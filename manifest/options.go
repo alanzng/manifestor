@@ -120,6 +120,52 @@ type authTokenOption struct {
 // WithAuthToken appends token as a query string parameter to all URIs.
 func WithAuthToken(token string) Option { return authTokenOption{token: token} }
 
+// ---- HLS filter inject options ----
+
+// hlsInjectVariantOption injects a variant during HLS filtering.
+type hlsInjectVariantOption struct {
+	hlsOnlyOption
+	params hls.VariantParams
+}
+
+// WithHLSInjectVariant appends a variant stream to an HLS playlist after filtering.
+func WithHLSInjectVariant(p hls.VariantParams) Option { return hlsInjectVariantOption{params: p} }
+
+// hlsInjectAudioTrackOption injects an audio track during HLS filtering.
+type hlsInjectAudioTrackOption struct {
+	hlsOnlyOption
+	params hls.AudioTrackParams
+}
+
+// WithHLSInjectAudioTrack appends an audio track to an HLS playlist after filtering.
+func WithHLSInjectAudioTrack(p hls.AudioTrackParams) Option {
+	return hlsInjectAudioTrackOption{params: p}
+}
+
+// hlsInjectSubtitleOption injects a subtitle track during HLS filtering.
+type hlsInjectSubtitleOption struct {
+	hlsOnlyOption
+	params hls.SubtitleTrackParams
+}
+
+// WithHLSInjectSubtitle appends a subtitle track to an HLS playlist after filtering.
+func WithHLSInjectSubtitle(p hls.SubtitleTrackParams) Option {
+	return hlsInjectSubtitleOption{params: p}
+}
+
+// ---- DASH filter inject options ----
+
+// dashInjectAdaptationSetOption injects an AdaptationSet during DASH filtering.
+type dashInjectAdaptationSetOption struct {
+	dashOnlyOption
+	params dash.AdaptationSetParams
+}
+
+// WithDASHInjectAdaptationSet appends an AdaptationSet to a DASH MPD after filtering.
+func WithDASHInjectAdaptationSet(p dash.AdaptationSetParams) Option {
+	return dashInjectAdaptationSetOption{params: p}
+}
+
 // ---- HLS build-only options ----
 
 // hlsOnlyOption is embedded by HLS-only build options.

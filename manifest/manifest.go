@@ -80,7 +80,7 @@ func FilterFromURL(rawURL string, opts ...Option) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrFetchFailed, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("%w: HTTP %d from %s", ErrFetchFailed, resp.StatusCode, rawURL)
@@ -163,6 +163,12 @@ func toHLSOpts(opts []Option) []hls.Option {
 			out = append(out, hls.WithAbsoluteURIs(v.origin))
 		case authTokenOption:
 			out = append(out, hls.WithAuthToken(v.token))
+		case hlsInjectVariantOption:
+			out = append(out, hls.WithInjectVariant(v.params))
+		case hlsInjectAudioTrackOption:
+			out = append(out, hls.WithInjectAudioTrack(v.params))
+		case hlsInjectSubtitleOption:
+			out = append(out, hls.WithInjectSubtitle(v.params))
 		}
 	}
 	return out
@@ -200,6 +206,8 @@ func toDASHOpts(opts []Option) []dash.Option {
 			out = append(out, dash.WithAbsoluteURIs(v.origin))
 		case authTokenOption:
 			out = append(out, dash.WithAuthToken(v.token))
+		case dashInjectAdaptationSetOption:
+			out = append(out, dash.WithInjectAdaptationSet(v.params))
 		}
 	}
 	return out
