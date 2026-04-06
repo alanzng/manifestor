@@ -56,11 +56,40 @@ func Filter(content string, opts ...Option) (string, error) {
 	// Filter audio tracks by language (F-08, F-13).
 	audioTracks := filterAudioTracks(p.AudioTracks, cfg)
 
+	// Inject additional variants, audio tracks, and subtitles.
+	for _, vp := range cfg.injectVariants {
+		filtered = append(filtered, Variant(vp))
+	}
+	for _, ap := range cfg.injectAudioTracks {
+		audioTracks = append(audioTracks, MediaTrack{
+			Type:       "AUDIO",
+			GroupID:    ap.GroupID,
+			Name:       ap.Name,
+			Language:   ap.Language,
+			URI:        ap.URI,
+			Default:    ap.Default,
+			AutoSelect: ap.AutoSelect,
+			Forced:     ap.Forced,
+		})
+	}
+	subtitles := p.Subtitles
+	for _, sp := range cfg.injectSubtitles {
+		subtitles = append(subtitles, MediaTrack{
+			Type:     "SUBTITLES",
+			GroupID:  sp.GroupID,
+			Name:     sp.Name,
+			Language: sp.Language,
+			URI:      sp.URI,
+			Default:  sp.Default,
+			Forced:   sp.Forced,
+		})
+	}
+
 	out := &MasterPlaylist{
 		Version:     p.Version,
 		Variants:    filtered,
 		AudioTracks: audioTracks,
-		Subtitles:   p.Subtitles,
+		Subtitles:   subtitles,
 		IFrames:     filteredIFrames,
 		Raw:         p.Raw,
 	}

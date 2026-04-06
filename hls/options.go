@@ -4,23 +4,26 @@ package hls
 type Option func(*filterConfig)
 
 type filterConfig struct {
-	codec           string
-	maxWidth        int
-	maxHeight       int
-	minWidth        int
-	minHeight       int
-	exactWidth      int
-	exactHeight     int
-	maxBandwidth    int
-	minBandwidth    int
-	maxFrameRate    float64
-	audioLanguage   string
-	mimeType        string
-	cdnBaseURL      string
-	absoluteOrigin  string
-	authToken       string
-	customFilter    func(*Variant) bool
-	customTransform func(*Variant)
+	codec             string
+	maxWidth          int
+	maxHeight         int
+	minWidth          int
+	minHeight         int
+	exactWidth        int
+	exactHeight       int
+	maxBandwidth      int
+	minBandwidth      int
+	maxFrameRate      float64
+	audioLanguage     string
+	mimeType          string
+	cdnBaseURL        string
+	absoluteOrigin    string
+	authToken         string
+	injectVariants    []VariantParams
+	injectAudioTracks []AudioTrackParams
+	injectSubtitles   []SubtitleTrackParams
+	customFilter      func(*Variant) bool
+	customTransform   func(*Variant)
 }
 
 // WithCodec keeps only variants whose Codecs field matches the given codec family.
@@ -93,4 +96,19 @@ func WithCustomFilter(fn func(*Variant) bool) Option {
 // WithCustomTransformer applies a user-defined transformer to each surviving variant.
 func WithCustomTransformer(fn func(*Variant)) Option {
 	return func(c *filterConfig) { c.customTransform = fn }
+}
+
+// WithInjectVariant appends a variant stream to the playlist after filtering.
+func WithInjectVariant(p VariantParams) Option {
+	return func(c *filterConfig) { c.injectVariants = append(c.injectVariants, p) }
+}
+
+// WithInjectAudioTrack appends an audio media track to the playlist after filtering.
+func WithInjectAudioTrack(p AudioTrackParams) Option {
+	return func(c *filterConfig) { c.injectAudioTracks = append(c.injectAudioTracks, p) }
+}
+
+// WithInjectSubtitle appends a subtitle media track to the playlist after filtering.
+func WithInjectSubtitle(p SubtitleTrackParams) Option {
+	return func(c *filterConfig) { c.injectSubtitles = append(c.injectSubtitles, p) }
 }
