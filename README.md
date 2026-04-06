@@ -3,7 +3,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/alanzng/manifestor.svg)](https://pkg.go.dev/github.com/alanzng/manifestor)
 [![CI](https://github.com/alanzng/manifestor/actions/workflows/ci.yml/badge.svg)](https://github.com/alanzng/manifestor/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/alanzng/manifestor)](https://goreportcard.com/report/github.com/alanzng/manifestor)
-[![Coverage](https://codecov.io/gh/alannguyen/manifestor/branch/main/graph/badge.svg)](https://codecov.io/gh/alannguyen/manifestor)
+[![Coverage](https://codecov.io/gh/alanzng/manifestor/branch/main/graph/badge.svg)](https://codecov.io/gh/alanzng/manifestor)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Parse, filter, build, and transform HLS & DASH manifests in Go. Zero dependencies. Ships as a library, HTTP proxy server, and CLI tool.
