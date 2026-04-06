@@ -113,10 +113,21 @@ func isAudioAdaptationSet(as *AdaptationSet) bool {
 	return strings.HasPrefix(strings.ToLower(as.MimeType), "audio/")
 }
 
+// isTextAdaptationSet reports whether as is a text/subtitle set by ContentType or MimeType.
+func isTextAdaptationSet(as *AdaptationSet) bool {
+	if strings.EqualFold(as.ContentType, "text") {
+		return true
+	}
+	return strings.HasPrefix(strings.ToLower(as.MimeType), "text/")
+}
+
 // representationPasses reports whether r satisfies all active filters.
 func representationPasses(r *Representation, as *AdaptationSet, cfg *filterConfig) bool {
-	if cfg.codec != "" && !matchesCodec(r.Codecs, cfg.codec) {
-		return false
+	// Codec filter applies to video only; audio/text sets are unaffected.
+	if cfg.codec != "" && !isAudioAdaptationSet(as) && !isTextAdaptationSet(as) {
+		if !matchesCodec(r.Codecs, cfg.codec) {
+			return false
+		}
 	}
 
 	// Resolve effective MimeType (may be inherited from AdaptationSet).

@@ -18,9 +18,13 @@ func TestFilter_Codec_H264(t *testing.T) {
 	m, _ := Parse(out)
 	for _, p := range m.Periods {
 		for _, as := range p.AdaptationSets {
+			// Codec filter applies to video only; audio sets are preserved as-is.
+			if isAudioAdaptationSet(&as) {
+				continue
+			}
 			for _, r := range as.Representations {
 				if r.Codecs != "" && !matchesCodec(r.Codecs, "h264") {
-					t.Errorf("non-h264 rep survived: %s (%s)", r.ID, r.Codecs)
+					t.Errorf("non-h264 video rep survived: %s (%s)", r.ID, r.Codecs)
 				}
 			}
 		}
@@ -41,8 +45,16 @@ func TestFilter_Codec_H265(t *testing.T) {
 }
 
 func TestFilter_Codec_NoMatch_ReturnsErr(t *testing.T) {
-	content := mustReadFixture(t, "../testdata/dash/isoff_ondemand.mpd")
-	_, err := Filter(content, WithCodec("av1"))
+	// A video-only MPD with no audio: filtering for av1 removes all reps.
+	videoOnly := `<?xml version="1.0"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011">
+  <Period>
+    <AdaptationSet mimeType="video/mp4">
+      <Representation id="v1" bandwidth="1000000" codecs="avc1.64001F" width="1280" height="720"/>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	_, err := Filter(videoOnly, WithCodec("av1"))
 	if !errors.Is(err, ErrNoVariantsRemain) {
 		t.Errorf("got %v, want ErrNoVariantsRemain", err)
 	}
