@@ -286,6 +286,243 @@ func TestParseAttrs_MixedQuotedAndUnquoted(t *testing.T) {
 	}
 }
 
+// ---- Bento4 mixed-codec fixture tests ----
+
+func TestParse_Bento4MixedCodecs_Counts(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	p, err := Parse(content)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if p.Version != 6 {
+		t.Errorf("Version = %d, want 6", p.Version)
+	}
+	if len(p.Variants) != 9 {
+		t.Errorf("len(Variants) = %d, want 9", len(p.Variants))
+	}
+	if len(p.AudioTracks) != 1 {
+		t.Errorf("len(AudioTracks) = %d, want 1", len(p.AudioTracks))
+	}
+	if len(p.IFrames) != 9 {
+		t.Errorf("len(IFrames) = %d, want 9", len(p.IFrames))
+	}
+}
+
+func TestParse_Bento4MixedCodecs_UnicodeAudioName(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	p, _ := Parse(content)
+
+	a := p.AudioTracks[0]
+	if a.Language != "tg" {
+		t.Errorf("Language = %q, want %q", a.Language, "tg")
+	}
+	// NAME contains Tajik Unicode characters (тоҷикӣ; تاجیکی).
+	if a.Name != "тоҷикӣ; تاجیکی" {
+		t.Errorf("Name = %q, want %q", a.Name, "тоҷикӣ; تاجیکی")
+	}
+	if !a.Default {
+		t.Error("Default = false, want true")
+	}
+	if !a.AutoSelect {
+		t.Error("AutoSelect = false, want true")
+	}
+	if a.GroupID != "audio" {
+		t.Errorf("GroupID = %q, want %q", a.GroupID, "audio")
+	}
+	if a.URI != "audio-tg-mp4a.40.2.m3u8" {
+		t.Errorf("URI = %q, want %q", a.URI, "audio-tg-mp4a.40.2.m3u8")
+	}
+}
+
+func TestParse_Bento4MixedCodecs_HEVCVariants(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	p, _ := Parse(content)
+
+	// First 5 variants are HEVC (hvc1).
+	hevcCases := []struct {
+		uri       string
+		bandwidth int
+		width     int
+		height    int
+		frameRate float64
+	}{
+		{"video-hvc1-1.m3u8", 3973253, 1280, 720, 50.0},
+		{"video-hvc1-2.m3u8", 9054045, 1920, 1080, 50.0},
+		{"video-hvc1-3.m3u8", 1387485, 854, 480, 50.0},
+		{"video-hvc1-4.m3u8", 13961357, 2560, 1440, 50.0},
+		{"video-hvc1-5.m3u8", 33796413, 3840, 2160, 50.0},
+	}
+	for i, tc := range hevcCases {
+		v := p.Variants[i]
+		if v.URI != tc.uri {
+			t.Errorf("Variants[%d].URI = %q, want %q", i, v.URI, tc.uri)
+		}
+		if v.Bandwidth != tc.bandwidth {
+			t.Errorf("Variants[%d].Bandwidth = %d, want %d", i, v.Bandwidth, tc.bandwidth)
+		}
+		if v.Width != tc.width || v.Height != tc.height {
+			t.Errorf("Variants[%d] resolution = %dx%d, want %dx%d", i, v.Width, v.Height, tc.width, tc.height)
+		}
+		if v.FrameRate != tc.frameRate {
+			t.Errorf("Variants[%d].FrameRate = %v, want %v", i, v.FrameRate, tc.frameRate)
+		}
+		if v.AudioGroupID != "audio" {
+			t.Errorf("Variants[%d].AudioGroupID = %q, want %q", i, v.AudioGroupID, "audio")
+		}
+	}
+}
+
+func TestParse_Bento4MixedCodecs_AVC1Variants(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	p, _ := Parse(content)
+
+	// Variants 5–8 are AVC1 (H.264) at 25 fps.
+	avcCases := []struct {
+		uri       string
+		bandwidth int
+		width     int
+		height    int
+	}{
+		{"video-avc1-1.m3u8", 6995839, 1920, 1080},
+		{"video-avc1-2.m3u8", 3785969, 1280, 720},
+		{"video-avc1-3.m3u8", 1581773, 640, 360},
+		{"video-avc1-4.m3u8", 2558145, 854, 480},
+	}
+	for i, tc := range avcCases {
+		v := p.Variants[5+i]
+		if v.URI != tc.uri {
+			t.Errorf("Variants[%d].URI = %q, want %q", 5+i, v.URI, tc.uri)
+		}
+		if v.Bandwidth != tc.bandwidth {
+			t.Errorf("Variants[%d].Bandwidth = %d, want %d", 5+i, v.Bandwidth, tc.bandwidth)
+		}
+		if v.Width != tc.width || v.Height != tc.height {
+			t.Errorf("Variants[%d] resolution = %dx%d, want %dx%d", 5+i, v.Width, v.Height, tc.width, tc.height)
+		}
+		if v.FrameRate != 25.0 {
+			t.Errorf("Variants[%d].FrameRate = %v, want 25.0", 5+i, v.FrameRate)
+		}
+	}
+}
+
+func TestParse_Bento4MixedCodecs_AverageBandwidth(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	p, _ := Parse(content)
+
+	// Spot-check AVERAGE-BANDWIDTH on a few variants.
+	cases := []struct {
+		idx int
+		avg int
+	}{
+		{0, 1777211},
+		{1, 3890445},
+		{5, 3146640},
+		{8, 1190437},
+	}
+	for _, tc := range cases {
+		if p.Variants[tc.idx].AverageBandwidth != tc.avg {
+			t.Errorf("Variants[%d].AverageBandwidth = %d, want %d",
+				tc.idx, p.Variants[tc.idx].AverageBandwidth, tc.avg)
+		}
+	}
+}
+
+func TestParse_Bento4MixedCodecs_IFrameStreams(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	p, _ := Parse(content)
+
+	iframeCases := []struct {
+		uri       string
+		bandwidth int
+		width     int
+		height    int
+	}{
+		{"video-hvc1-1_iframes.m3u8", 4566200, 1280, 720},
+		{"video-hvc1-5_iframes.m3u8", 22581800, 3840, 2160},
+		{"video-avc1-1_iframes.m3u8", 3382533, 1920, 1080},
+		{"video-avc1-4_iframes.m3u8", 1788467, 854, 480},
+	}
+	// Map by URI for order-independent lookup.
+	byURI := make(map[string]IFrameStream, len(p.IFrames))
+	for _, f := range p.IFrames {
+		byURI[f.URI] = f
+	}
+	for _, tc := range iframeCases {
+		f, ok := byURI[tc.uri]
+		if !ok {
+			t.Errorf("IFrame %q not found", tc.uri)
+			continue
+		}
+		if f.Bandwidth != tc.bandwidth {
+			t.Errorf("IFrame %q Bandwidth = %d, want %d", tc.uri, f.Bandwidth, tc.bandwidth)
+		}
+		if f.Width != tc.width || f.Height != tc.height {
+			t.Errorf("IFrame %q resolution = %dx%d, want %dx%d", tc.uri, f.Width, f.Height, tc.width, tc.height)
+		}
+	}
+}
+
+func TestParse_Bento4MixedCodecs_CommentsInRaw(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	p, _ := Parse(content)
+
+	// Comment lines (# ...) and bare # are unknown tags stored in Raw.
+	wantInRaw := []string{
+		"# Created with Bento4 mp4-dash.py, VERSION=2.0.0-639",
+		"#",
+		"# Media Playlists",
+		"# Audio",
+		"# Video",
+		"# I-Frame Playlists",
+	}
+	rawSet := make(map[string]bool, len(p.Raw))
+	for _, r := range p.Raw {
+		rawSet[r] = true
+	}
+	for _, want := range wantInRaw {
+		if !rawSet[want] {
+			t.Errorf("Raw missing %q", want)
+		}
+	}
+}
+
+func TestParse_Bento4MixedCodecs_4KResolution(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	p, _ := Parse(content)
+
+	// 4K variant is the 5th HEVC stream (index 4).
+	v := p.Variants[4]
+	if v.Width != 3840 || v.Height != 2160 {
+		t.Errorf("4K variant resolution = %dx%d, want 3840x2160", v.Width, v.Height)
+	}
+	if v.Bandwidth != 33796413 {
+		t.Errorf("4K variant Bandwidth = %d, want 33796413", v.Bandwidth)
+	}
+}
+
+func TestParse_Bento4MixedCodecs_VariantOrder(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	p, _ := Parse(content)
+
+	wantURIs := []string{
+		"video-hvc1-1.m3u8",
+		"video-hvc1-2.m3u8",
+		"video-hvc1-3.m3u8",
+		"video-hvc1-4.m3u8",
+		"video-hvc1-5.m3u8",
+		"video-avc1-1.m3u8",
+		"video-avc1-2.m3u8",
+		"video-avc1-3.m3u8",
+		"video-avc1-4.m3u8",
+	}
+	for i, want := range wantURIs {
+		if p.Variants[i].URI != want {
+			t.Errorf("Variants[%d].URI = %q, want %q", i, p.Variants[i].URI, want)
+		}
+	}
+}
+
 // ---- parseResolution unit tests ----
 
 func TestParseResolution(t *testing.T) {
