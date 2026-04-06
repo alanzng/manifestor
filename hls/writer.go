@@ -126,9 +126,3 @@ func writeIFrameStream(sb *strings.Builder, f IFrameStream) {
 
 	sb.WriteByte('\n')
 }
-
-// quoteAttr wraps a string in double quotes, matching HLS attribute list syntax.
-// Used internally; exported for use by the builder.
-func quoteAttr(s string) string {
-	return `"` + strings.ReplaceAll(s, `"`, `\"`) + `"`
-}
