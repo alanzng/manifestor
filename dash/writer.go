@@ -48,6 +48,10 @@ func buildXMLAdaptation(as AdaptationSet) xmlOutAdaptation {
 		ContentType: as.ContentType,
 		MimeType:    as.MimeType,
 		Lang:        as.Lang,
+		Label:       as.Name,
+	}
+	for _, role := range as.Roles {
+		xa.Roles = append(xa.Roles, xmlOutRole(role))
 	}
 	if as.SegmentTemplate != nil {
 		st := as.SegmentTemplate
@@ -65,6 +69,7 @@ func buildXMLAdaptation(as AdaptationSet) xmlOutAdaptation {
 			Bandwidth: r.Bandwidth,
 			Codecs:    r.Codecs,
 			FrameRate: r.FrameRate,
+			BaseURL:   r.BaseURL,
 		}
 		if r.Width > 0 && r.Height > 0 {
 			xr.Width = r.Width
@@ -73,6 +78,12 @@ func buildXMLAdaptation(as AdaptationSet) xmlOutAdaptation {
 		// Omit MimeType on Representation when it matches the AdaptationSet.
 		if r.MimeType != "" && r.MimeType != as.MimeType {
 			xr.MimeType = r.MimeType
+		}
+		if r.AudioChannelConfiguration != nil {
+			xr.AudioChannelConfiguration = &xmlOutAudioChannelConfiguration{
+				SchemeIDURI: r.AudioChannelConfiguration.SchemeIDURI,
+				Value:       r.AudioChannelConfiguration.Value,
+			}
 		}
 		xa.Representations = append(xa.Representations, xr)
 	}
@@ -107,23 +118,37 @@ type xmlOutPeriod struct {
 	AdaptationSets []xmlOutAdaptation `xml:"AdaptationSet"`
 }
 
+type xmlOutRole struct {
+	SchemeIDURI string `xml:"schemeIdUri,attr,omitempty"`
+	Value       string `xml:"value,attr,omitempty"`
+}
+
+type xmlOutAudioChannelConfiguration struct {
+	SchemeIDURI string `xml:"schemeIdUri,attr,omitempty"`
+	Value       string `xml:"value,attr,omitempty"`
+}
+
 type xmlOutAdaptation struct {
 	ID              string                 `xml:"id,attr,omitempty"`
 	ContentType     string                 `xml:"contentType,attr,omitempty"`
 	MimeType        string                 `xml:"mimeType,attr,omitempty"`
 	Lang            string                 `xml:"lang,attr,omitempty"`
+	Label           string                 `xml:"label,attr,omitempty"`
+	Roles           []xmlOutRole           `xml:"Role,omitempty"`
 	SegmentTemplate *xmlOutSegmentTemplate `xml:"SegmentTemplate,omitempty"`
 	Representations []xmlOutRepresentation `xml:"Representation"`
 }
 
 type xmlOutRepresentation struct {
-	ID        string `xml:"id,attr,omitempty"`
-	Bandwidth int    `xml:"bandwidth,attr"`
-	Codecs    string `xml:"codecs,attr,omitempty"`
-	Width     int    `xml:"width,attr,omitempty"`
-	Height    int    `xml:"height,attr,omitempty"`
-	FrameRate string `xml:"frameRate,attr,omitempty"`
-	MimeType  string `xml:"mimeType,attr,omitempty"`
+	ID                        string                           `xml:"id,attr,omitempty"`
+	Bandwidth                 int                              `xml:"bandwidth,attr"`
+	Codecs                    string                           `xml:"codecs,attr,omitempty"`
+	Width                     int                              `xml:"width,attr,omitempty"`
+	Height                    int                              `xml:"height,attr,omitempty"`
+	FrameRate                 string                           `xml:"frameRate,attr,omitempty"`
+	MimeType                  string                           `xml:"mimeType,attr,omitempty"`
+	BaseURL                   string                           `xml:"BaseURL,omitempty"`
+	AudioChannelConfiguration *xmlOutAudioChannelConfiguration `xml:"AudioChannelConfiguration,omitempty"`
 }
 
 type xmlOutSegmentTemplate struct {

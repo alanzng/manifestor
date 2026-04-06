@@ -428,3 +428,29 @@ func TestParse_Bento4Mixed_MimeTypeInheritedByAllReps(t *testing.T) {
 		}
 	}
 }
+
+func TestParse_Bento4Mixed_BaseURL(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	mpd, _ := Parse(content)
+	// First AdaptationSet is HEVC video; first representation has BaseURL.
+	r := mpd.Periods[0].AdaptationSets[0].Representations[0]
+	if r.BaseURL != "media-video-hvc1-1.mp4" {
+		t.Errorf("BaseURL = %q, want media-video-hvc1-1.mp4", r.BaseURL)
+	}
+}
+
+func TestParse_Bento4Mixed_AudioChannelConfiguration(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	mpd, _ := Parse(content)
+	// Audio AdaptationSet is index 2.
+	r := mpd.Periods[0].AdaptationSets[2].Representations[0]
+	if r.AudioChannelConfiguration == nil {
+		t.Fatal("AudioChannelConfiguration is nil, want non-nil")
+	}
+	if r.AudioChannelConfiguration.SchemeIDURI != "urn:mpeg:mpegB:cicp:ChannelConfiguration" {
+		t.Errorf("SchemeIDURI = %q", r.AudioChannelConfiguration.SchemeIDURI)
+	}
+	if r.AudioChannelConfiguration.Value != "2" {
+		t.Errorf("Value = %q, want 2", r.AudioChannelConfiguration.Value)
+	}
+}

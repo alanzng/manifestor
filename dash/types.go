@@ -21,12 +21,26 @@ type Period struct {
 	AdaptationSets []AdaptationSet
 }
 
+// AudioChannelConfiguration represents an <AudioChannelConfiguration> element.
+type AudioChannelConfiguration struct {
+	SchemeIDURI string
+	Value       string
+}
+
+// Role represents a <Role> element.
+type Role struct {
+	SchemeIDURI string
+	Value       string
+}
+
 // AdaptationSet represents an <AdaptationSet> element.
 type AdaptationSet struct {
 	ID              string
 	ContentType     string
 	MimeType        string
 	Lang            string
+	Name            string
+	Roles           []Role
 	SegmentTemplate *SegmentTemplate
 	SegmentBase     *SegmentBase
 	Representations []Representation
@@ -34,14 +48,16 @@ type AdaptationSet struct {
 
 // Representation represents a <Representation> element.
 type Representation struct {
-	ID           string
-	Bandwidth    int
-	Codecs       string
-	Width        int
-	Height       int
-	FrameRate    string
-	MimeType     string
-	StartWithSAP int
+	ID                        string
+	Bandwidth                 int
+	Codecs                    string
+	Width                     int
+	Height                    int
+	FrameRate                 string
+	MimeType                  string
+	StartWithSAP              int
+	BaseURL                   string
+	AudioChannelConfiguration *AudioChannelConfiguration
 }
 
 // SegmentTemplate represents a <SegmentTemplate> element.
@@ -69,14 +85,16 @@ type MPDConfig struct {
 
 // RepresentationParams holds parameters for a single Representation in the builder.
 type RepresentationParams struct {
-	ID           string // required, unique within AdaptationSet
-	Bandwidth    int    // required
-	Codecs       string
-	Width        int
-	Height       int
-	FrameRate    string
-	MimeType     string
-	StartWithSAP int
+	ID                        string // required, unique within AdaptationSet
+	Bandwidth                 int    // required
+	Codecs                    string
+	Width                     int
+	Height                    int
+	FrameRate                 string
+	MimeType                  string
+	StartWithSAP              int
+	BaseURL                   string
+	AudioChannelConfiguration *AudioChannelConfiguration
 }
 
 // SegmentTemplateParams holds parameters for a SegmentTemplate.
@@ -99,6 +117,8 @@ type AdaptationSetParams struct {
 	ContentType     string // inferred from MimeType if blank
 	MimeType        string
 	Lang            string // BCP-47
+	Name            string
+	Roles           []Role
 	SegmentTemplate *SegmentTemplateParams
 	SegmentBase     *SegmentBaseParams
 	Representations []RepresentationParams
