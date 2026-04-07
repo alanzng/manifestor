@@ -33,6 +33,10 @@ var (
 
 	// ErrFetchFailed is returned when fetching an upstream URL fails.
 	ErrFetchFailed = errors.New("manifest: failed to fetch upstream manifest")
+
+	// ErrNoVariantsRemain is returned when all variants/representations have been
+	// filtered out, regardless of the underlying manifest format.
+	ErrNoVariantsRemain = errors.New("manifest: no variants remain after filtering")
 )
 
 // Option configures the behaviour of Filter and Build.
@@ -66,9 +70,17 @@ func Filter(content string, opts ...Option) (string, error) {
 	}
 	switch format {
 	case FormatHLS:
-		return hls.Filter(content, toHLSOpts(opts)...)
+		out, err := hls.Filter(content, toHLSOpts(opts)...)
+		if errors.Is(err, hls.ErrNoVariantsRemain) {
+			return "", fmt.Errorf("%w: %w", ErrNoVariantsRemain, err)
+		}
+		return out, err
 	case FormatDASH:
-		return dash.Filter(content, toDASHOpts(opts)...)
+		out, err := dash.Filter(content, toDASHOpts(opts)...)
+		if errors.Is(err, dash.ErrNoVariantsRemain) {
+			return "", fmt.Errorf("%w: %w", ErrNoVariantsRemain, err)
+		}
+		return out, err
 	}
 	return "", ErrInvalidFormat
 }
