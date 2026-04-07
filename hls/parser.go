@@ -78,8 +78,9 @@ func Parse(content string) (*MasterPlaylist, error) {
 			attrs := parseAttrs(strings.TrimPrefix(line, "#EXT-X-I-FRAME-STREAM-INF:"))
 			p.IFrames = append(p.IFrames, parseIFrameStream(attrs))
 
-		case strings.HasPrefix(line, "#"):
-			// Unknown tag — preserve for pass-through (P-05).
+		case strings.HasPrefix(line, "#EXT"):
+			// Unknown extension tag — preserve for pass-through.
+			// Plain comments (# ...) are silently dropped.
 			p.Raw = append(p.Raw, line)
 		}
 	}
@@ -215,6 +216,9 @@ func parseIFrameStream(attrs map[string]string) IFrameStream {
 	}
 	if bw, ok := attrs["BANDWIDTH"]; ok {
 		f.Bandwidth, _ = strconv.Atoi(bw)
+	}
+	if abw, ok := attrs["AVERAGE-BANDWIDTH"]; ok {
+		f.AverageBandwidth, _ = strconv.Atoi(abw)
 	}
 	if c, ok := attrs["CODECS"]; ok {
 		f.Codecs = c

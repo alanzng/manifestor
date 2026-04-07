@@ -41,11 +41,12 @@ type MediaTrack struct {
 
 // IFrameStream represents a #EXT-X-I-FRAME-STREAM-INF entry.
 type IFrameStream struct {
-	URI       string
-	Bandwidth int
-	Codecs    string
-	Width     int
-	Height    int
+	URI              string
+	Bandwidth        int
+	AverageBandwidth int
+	Codecs           string
+	Width            int
+	Height           int
 }
 
 // VariantParams holds the parameters for building a video variant.
@@ -85,9 +86,10 @@ type SubtitleTrackParams struct {
 
 // IFrameParams holds the parameters for building an #EXT-X-I-FRAME-STREAM-INF entry.
 type IFrameParams struct {
-	URI       string // required
-	Bandwidth int    // required
-	Codecs    string
-	Width     int
-	Height    int
+	URI              string // required
+	Bandwidth        int    // required
+	AverageBandwidth int
+	Codecs           string
+	Width            int
+	Height           int
 }

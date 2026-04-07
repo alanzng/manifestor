@@ -467,8 +467,8 @@ func TestParse_Bento4MixedCodecs_CommentsInRaw(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
 	p, _ := Parse(content)
 
-	// Comment lines (# ...) and bare # are unknown tags stored in Raw.
-	wantInRaw := []string{
+	// Plain comment lines (# ...) and bare # are silently dropped; Raw must not contain them.
+	unwantedInRaw := []string{
 		"# Created with Bento4 mp4-dash.py, VERSION=2.0.0-639",
 		"#",
 		"# Media Playlists",
@@ -480,9 +480,9 @@ func TestParse_Bento4MixedCodecs_CommentsInRaw(t *testing.T) {
 	for _, r := range p.Raw {
 		rawSet[r] = true
 	}
-	for _, want := range wantInRaw {
-		if !rawSet[want] {
-			t.Errorf("Raw missing %q", want)
+	for _, unwanted := range unwantedInRaw {
+		if rawSet[unwanted] {
+			t.Errorf("Raw should not contain plain comment %q", unwanted)
 		}
 	}
 }
