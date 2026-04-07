@@ -551,3 +551,22 @@ func TestFilter_WithInjectSubtitle(t *testing.T) {
 		t.Errorf("injected URI = %q", injected.URI)
 	}
 }
+
+// ---- rewriteURI edge cases ----
+
+func TestRewriteURI_MalformedURI_ReturnedUnchanged(t *testing.T) {
+	// url.Parse error path: a URI with a control character is unparseable.
+	bad := "http://host/path\x7f"
+	got := rewriteURI(bad, &filterConfig{authToken: "tok"})
+	if got != bad {
+		t.Errorf("expected malformed URI returned unchanged, got %q", got)
+	}
+}
+
+func TestRewriteURI_MalformedAbsoluteOrigin_RelativeURIUnchanged(t *testing.T) {
+	// If absoluteOrigin is unparseable, relative URI is returned as-is.
+	got := rewriteURI("segment.m3u8", &filterConfig{absoluteOrigin: "://bad origin\x7f"})
+	if got != "segment.m3u8" {
+		t.Errorf("expected relative URI unchanged on bad origin, got %q", got)
+	}
+}

@@ -199,58 +199,33 @@ func applyTransformers(v *Variant, cfg *filterConfig) {
 }
 
 // rewriteURI applies the active URI transformers to a single URI string.
+// It parses the URI only once for efficiency.
 func rewriteURI(uri string, cfg *filterConfig) string {
-	if cfg.absoluteOrigin != "" {
-		uri = makeAbsolute(uri, cfg.absoluteOrigin)
+	if cfg.absoluteOrigin == "" && cfg.cdnBaseURL == "" && cfg.authToken == "" {
+		return uri
 	}
-	if cfg.cdnBaseURL != "" {
-		uri = rewriteCDN(uri, cfg.cdnBaseURL)
+	u, err := url.Parse(uri)
+	if err != nil {
+		return uri
+	}
+	if cfg.absoluteOrigin != "" && !u.IsAbs() {
+		base, err := url.Parse(cfg.absoluteOrigin)
+		if err == nil {
+			u = base.ResolveReference(u)
+		}
+	}
+	if cfg.cdnBaseURL != "" && u.IsAbs() {
+		c, err := url.Parse(cfg.cdnBaseURL)
+		if err == nil {
+			u.Scheme = c.Scheme
+			u.Host = c.Host
+		}
 	}
 	if cfg.authToken != "" {
-		uri = appendToken(uri, cfg.authToken)
+		q := u.Query()
+		q.Set("token", cfg.authToken)
+		u.RawQuery = q.Encode()
 	}
-	return uri
-}
-
-// makeAbsolute resolves a relative URI against origin (T-01).
-func makeAbsolute(uri, origin string) string {
-	u, err := url.Parse(uri)
-	if err != nil || u.IsAbs() {
-		return uri
-	}
-	base, err := url.Parse(origin)
-	if err != nil {
-		return uri
-	}
-	return base.ResolveReference(u).String()
-}
-
-// rewriteCDN replaces the scheme and host of uri with those from cdn (T-02).
-// The original path, query, and fragment are preserved.
-func rewriteCDN(uri, cdn string) string {
-	u, err := url.Parse(uri)
-	if err != nil || !u.IsAbs() {
-		return uri
-	}
-	c, err := url.Parse(cdn)
-	if err != nil {
-		return uri
-	}
-	u.Scheme = c.Scheme
-	u.Host = c.Host
-	return u.String()
-}
-
-// appendToken appends token as a query parameter to uri (T-03).
-// Uses Set (not Add) so repeated calls are idempotent.
-func appendToken(uri, token string) string {
-	u, err := url.Parse(uri)
-	if err != nil {
-		return uri + "?token=" + token
-	}
-	q := u.Query()
-	q.Set("token", token)
-	u.RawQuery = q.Encode()
 	return u.String()
 }
 

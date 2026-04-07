@@ -2,6 +2,7 @@ package hls
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -83,19 +84,25 @@ func writeMediaTrack(sb *strings.Builder, t MediaTrack) {
 
 // writeVariant emits a #EXT-X-STREAM-INF line followed by the variant URI.
 func writeVariant(sb *strings.Builder, v Variant) {
-	fmt.Fprintf(sb, "#EXT-X-STREAM-INF:BANDWIDTH=%d", v.Bandwidth)
+	sb.WriteString("#EXT-X-STREAM-INF:BANDWIDTH=")
+	sb.WriteString(strconv.Itoa(v.Bandwidth))
 
 	if v.AverageBandwidth > 0 {
-		fmt.Fprintf(sb, ",AVERAGE-BANDWIDTH=%d", v.AverageBandwidth)
+		sb.WriteString(",AVERAGE-BANDWIDTH=")
+		sb.WriteString(strconv.Itoa(v.AverageBandwidth))
 	}
 	if v.Codecs != "" {
 		fmt.Fprintf(sb, ",CODECS=%q", v.Codecs)
 	}
 	if v.Width > 0 && v.Height > 0 {
-		fmt.Fprintf(sb, ",RESOLUTION=%dx%d", v.Width, v.Height)
+		sb.WriteString(",RESOLUTION=")
+		sb.WriteString(strconv.Itoa(v.Width))
+		sb.WriteByte('x')
+		sb.WriteString(strconv.Itoa(v.Height))
 	}
 	if v.FrameRate > 0 {
-		fmt.Fprintf(sb, ",FRAME-RATE=%.3f", v.FrameRate)
+		sb.WriteString(",FRAME-RATE=")
+		sb.WriteString(strconv.FormatFloat(v.FrameRate, 'f', 3, 64))
 	}
 	if v.AudioGroupID != "" {
 		fmt.Fprintf(sb, ",AUDIO=%q", v.AudioGroupID)
@@ -114,16 +121,21 @@ func writeVariant(sb *strings.Builder, v Variant) {
 
 // writeIFrameStream emits a single #EXT-X-I-FRAME-STREAM-INF line.
 func writeIFrameStream(sb *strings.Builder, f IFrameStream) {
-	fmt.Fprintf(sb, "#EXT-X-I-FRAME-STREAM-INF:BANDWIDTH=%d", f.Bandwidth)
+	sb.WriteString("#EXT-X-I-FRAME-STREAM-INF:BANDWIDTH=")
+	sb.WriteString(strconv.Itoa(f.Bandwidth))
 
 	if f.AverageBandwidth > 0 {
-		fmt.Fprintf(sb, ",AVERAGE-BANDWIDTH=%d", f.AverageBandwidth)
+		sb.WriteString(",AVERAGE-BANDWIDTH=")
+		sb.WriteString(strconv.Itoa(f.AverageBandwidth))
 	}
 	if f.Codecs != "" {
 		fmt.Fprintf(sb, ",CODECS=%q", f.Codecs)
 	}
 	if f.Width > 0 && f.Height > 0 {
-		fmt.Fprintf(sb, ",RESOLUTION=%dx%d", f.Width, f.Height)
+		sb.WriteString(",RESOLUTION=")
+		sb.WriteString(strconv.Itoa(f.Width))
+		sb.WriteByte('x')
+		sb.WriteString(strconv.Itoa(f.Height))
 	}
 	fmt.Fprintf(sb, ",URI=%q", f.URI)
 
