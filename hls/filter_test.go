@@ -2,7 +2,6 @@ package hls
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -25,10 +24,6 @@ func TestFilter_Codec_H264(t *testing.T) {
 			t.Errorf("variant %q has non-h264 codec %q", v.URI, v.Codecs)
 		}
 	}
-	out, _ = Serialize(p)
-	fmt.Println(">>>>>>>>")
-	fmt.Println(out)
-	fmt.Println("<<<<<<<<")
 }
 
 func TestFilter_Codec_H265(t *testing.T) {
