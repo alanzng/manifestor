@@ -229,48 +229,6 @@ func rewriteURI(uri string, cfg *filterConfig) string {
 	return u.String()
 }
 
-// makeAbsolute resolves a relative URI against origin (T-01).
-func makeAbsolute(uri, origin string) string {
-	u, err := url.Parse(uri)
-	if err != nil || u.IsAbs() {
-		return uri
-	}
-	base, err := url.Parse(origin)
-	if err != nil {
-		return uri
-	}
-	return base.ResolveReference(u).String()
-}
-
-// rewriteCDN replaces the scheme and host of uri with those from cdn (T-02).
-// The original path, query, and fragment are preserved.
-func rewriteCDN(uri, cdn string) string {
-	u, err := url.Parse(uri)
-	if err != nil || !u.IsAbs() {
-		return uri
-	}
-	c, err := url.Parse(cdn)
-	if err != nil {
-		return uri
-	}
-	u.Scheme = c.Scheme
-	u.Host = c.Host
-	return u.String()
-}
-
-// appendToken appends token as a query parameter to uri (T-03).
-// Uses Set (not Add) so repeated calls are idempotent.
-func appendToken(uri, token string) string {
-	u, err := url.Parse(uri)
-	if err != nil {
-		return uri + "?token=" + token
-	}
-	q := u.Query()
-	q.Set("token", token)
-	u.RawQuery = q.Encode()
-	return u.String()
-}
-
 // matchesCodec reports whether the HLS CODECS attribute value contains a codec
 // from the requested family. Matching is case-insensitive.
 //
