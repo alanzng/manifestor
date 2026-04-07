@@ -42,7 +42,7 @@ go install github.com/alanzng/manifestor/cmd/manifestor@latest
 ### Docker
 
 ```bash
-docker pull ghcr.io/alannguyen/manifestor:latest
+docker pull ghcr.io/alanng/manifestor:latest
 ```
 
 ---
@@ -376,11 +376,12 @@ Tested against real-world output from:
             <th>Name</th>
             <th>Logo</th>
             <th>Website</th>
+            <th>Description</th>
         </tr>
     </thead>
     <tbody>
         <tr>
-            <td>Vieon</td>
+            <td><strong>Vieon</strong></td>
             <td align="center">
                 <picture>
                     <source media="(prefers-color-scheme: dark)" srcset="docs/vieon-logo-dark.svg" />
@@ -388,6 +389,7 @@ Tested against real-world output from:
                 </picture>
             </td>
             <td><a href="https://vieon.vn/">vieon.vn</a></td>
+            <td>Vietnam's leading OTT streaming platform. Uses manifestor to filter and transform HLS &amp; DASH manifests for multi-codec VOD delivery (AVC1 + HVC1) with CDN rewriting and per-request auth tokens.</td>
         </tr>
     </tbody>
 </table>
