@@ -182,11 +182,13 @@ func applyTransformers(r *Representation, cfg *filterConfig) {
 		u, err := url.Parse(uri)
 		if err == nil {
 			if cfg.absoluteOrigin != "" && !u.IsAbs() {
-				base, berr := url.Parse(cfg.absoluteOrigin)
+				origin := cfg.absoluteOrigin
+				if !strings.HasSuffix(origin, "/") {
+					origin += "/"
+				}
+				base, berr := url.Parse(origin)
 				if berr == nil {
-					// Preserve dash makeAbsolute path-join behaviour.
-					base.Path = path.Join(base.Path, uri)
-					u = base
+					u = base.ResolveReference(u)
 				}
 			}
 			if cfg.cdnBaseURL != "" {
