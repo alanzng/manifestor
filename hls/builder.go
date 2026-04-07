@@ -65,21 +65,25 @@ func (b *MasterBuilder) Build() (string, error) {
 	}
 
 	// Build group-ID sets for orphan detection.
-	audioGroups := make(map[string]bool, len(b.audio))
+	audioGroups := make(map[string]struct{}, len(b.audio))
 	for _, a := range b.audio {
-		audioGroups[a.GroupID] = true
+		audioGroups[a.GroupID] = struct{}{}
 	}
-	subtitleGroups := make(map[string]bool, len(b.subtitles))
+	subtitleGroups := make(map[string]struct{}, len(b.subtitles))
 	for _, s := range b.subtitles {
-		subtitleGroups[s.GroupID] = true
+		subtitleGroups[s.GroupID] = struct{}{}
 	}
 
 	for _, v := range b.variants {
-		if v.AudioGroupID != "" && !audioGroups[v.AudioGroupID] {
-			return "", ErrOrphanedGroupID
+		if v.AudioGroupID != "" {
+			if _, ok := audioGroups[v.AudioGroupID]; !ok {
+				return "", ErrOrphanedGroupID
+			}
 		}
-		if v.SubtitleGroupID != "" && !subtitleGroups[v.SubtitleGroupID] {
-			return "", ErrOrphanedGroupID
+		if v.SubtitleGroupID != "" {
+			if _, ok := subtitleGroups[v.SubtitleGroupID]; !ok {
+				return "", ErrOrphanedGroupID
+			}
 		}
 	}
 

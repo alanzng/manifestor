@@ -175,15 +175,39 @@ func representationPasses(r *Representation, as *AdaptationSet, cfg *filterConfi
 }
 
 // applyTransformers applies URI and custom transformers to a surviving representation.
+// It parses the BaseURL only once for efficiency.
 func applyTransformers(r *Representation, cfg *filterConfig) {
-	if cfg.absoluteOrigin != "" {
-		r.BaseURL = makeAbsolute(r.BaseURL, cfg.absoluteOrigin)
-	}
-	if cfg.cdnBaseURL != "" {
-		r.BaseURL = rewriteCDN(r.BaseURL, cfg.cdnBaseURL)
-	}
-	if cfg.authToken != "" {
-		r.BaseURL = appendToken(r.BaseURL, cfg.authToken)
+	if cfg.absoluteOrigin != "" || cfg.cdnBaseURL != "" || cfg.authToken != "" {
+		uri := r.BaseURL
+		u, err := url.Parse(uri)
+		if err == nil {
+			if cfg.absoluteOrigin != "" && !u.IsAbs() {
+				base, berr := url.Parse(cfg.absoluteOrigin)
+				if berr == nil {
+					// Preserve dash makeAbsolute path-join behaviour.
+					base.Path = path.Join(base.Path, uri)
+					u = base
+				}
+			}
+			if cfg.cdnBaseURL != "" {
+				cdn, cerr := url.Parse(cfg.cdnBaseURL)
+				if cerr == nil {
+					if u.IsAbs() {
+						u.Scheme = cdn.Scheme
+						u.Host = cdn.Host
+					} else {
+						cdn.Path = path.Join(cdn.Path, u.Path)
+						u = cdn
+					}
+				}
+			}
+			if cfg.authToken != "" {
+				q := u.Query()
+				q.Set("token", cfg.authToken)
+				u.RawQuery = q.Encode()
+			}
+			r.BaseURL = u.String()
+		}
 	}
 	if cfg.customTransform != nil {
 		cfg.customTransform(r)

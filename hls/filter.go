@@ -199,17 +199,34 @@ func applyTransformers(v *Variant, cfg *filterConfig) {
 }
 
 // rewriteURI applies the active URI transformers to a single URI string.
+// It parses the URI only once for efficiency.
 func rewriteURI(uri string, cfg *filterConfig) string {
-	if cfg.absoluteOrigin != "" {
-		uri = makeAbsolute(uri, cfg.absoluteOrigin)
+	if cfg.absoluteOrigin == "" && cfg.cdnBaseURL == "" && cfg.authToken == "" {
+		return uri
 	}
-	if cfg.cdnBaseURL != "" {
-		uri = rewriteCDN(uri, cfg.cdnBaseURL)
+	u, err := url.Parse(uri)
+	if err != nil {
+		return uri
+	}
+	if cfg.absoluteOrigin != "" && !u.IsAbs() {
+		base, err := url.Parse(cfg.absoluteOrigin)
+		if err == nil {
+			u = base.ResolveReference(u)
+		}
+	}
+	if cfg.cdnBaseURL != "" && u.IsAbs() {
+		c, err := url.Parse(cfg.cdnBaseURL)
+		if err == nil {
+			u.Scheme = c.Scheme
+			u.Host = c.Host
+		}
 	}
 	if cfg.authToken != "" {
-		uri = appendToken(uri, cfg.authToken)
+		q := u.Query()
+		q.Set("token", cfg.authToken)
+		u.RawQuery = q.Encode()
 	}
-	return uri
+	return u.String()
 }
 
 // makeAbsolute resolves a relative URI against origin (T-01).

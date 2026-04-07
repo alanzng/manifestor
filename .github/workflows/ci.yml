@@ -24,8 +24,13 @@ jobs:
       - name: Build
         run: go build ./...
 
-      - name: Test (with race detector)
+      - name: Test (with race detector and coverage)
+        if: matrix.go == '1.22'
         run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Test
+        if: matrix.go != '1.22'
+        run: go test ./...
 
       - name: Upload coverage reports to Codecov
         if: matrix.go == '1.22'
