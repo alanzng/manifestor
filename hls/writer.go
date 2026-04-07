@@ -116,6 +116,9 @@ func writeVariant(sb *strings.Builder, v Variant) {
 func writeIFrameStream(sb *strings.Builder, f IFrameStream) {
 	fmt.Fprintf(sb, "#EXT-X-I-FRAME-STREAM-INF:BANDWIDTH=%d", f.Bandwidth)
 
+	if f.AverageBandwidth > 0 {
+		fmt.Fprintf(sb, ",AVERAGE-BANDWIDTH=%d", f.AverageBandwidth)
+	}
 	if f.Codecs != "" {
 		fmt.Fprintf(sb, ",CODECS=%q", f.Codecs)
 	}
