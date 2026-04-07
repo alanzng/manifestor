@@ -80,8 +80,8 @@ func Parse(content string) (*MasterPlaylist, error) {
 
 		case strings.HasPrefix(line, "#EXT"):
 			// Unknown extension tag — preserve for pass-through.
+			// Plain comments (# ...) are silently dropped.
 			p.Raw = append(p.Raw, line)
-		// plain comments (# ...) are silently dropped
 		}
 	}
 
