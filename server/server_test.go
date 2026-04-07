@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,25 @@ import (
 
 	"github.com/alanzng/manifestor/server"
 )
+
+func ctxGet(t *testing.T, url string) (*http.Response, error) {
+	t.Helper()
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	return http.DefaultClient.Do(req)
+}
+
+func ctxPost(t *testing.T, url, contentType string, body []byte) (*http.Response, error) {
+	t.Helper()
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", contentType)
+	return http.DefaultClient.Do(req)
+}
 
 const sampleHLS = `#EXTM3U
 #EXT-X-VERSION:3
@@ -35,7 +55,7 @@ func TestHandleFilterNoURL(t *testing.T) {
 	srv := newTestServer()
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/filter")
+	resp, err := ctxGet(t, srv.URL+"/filter")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +72,7 @@ func TestHandleFilterSuccess(t *testing.T) {
 	srv := newTestServer()
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/filter?url=" + upstream.URL + "/test.m3u8")
+	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/test.m3u8")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +101,7 @@ video-hevc.m3u8
 	srv := newTestServer()
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/filter?url=" + upstream.URL + "/test.m3u8&codec=h264")
+	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/test.m3u8&codec=h264")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +139,7 @@ func TestHandleBuildHLS(t *testing.T) {
 		},
 	})
 
-	resp, err := http.Post(srv.URL+"/build", "application/json", bytes.NewReader(body))
+	resp, err := ctxPost(t, srv.URL+"/build", "application/json", body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,7 +181,7 @@ func TestHandleBuildDASH(t *testing.T) {
 		},
 	})
 
-	resp, err := http.Post(srv.URL+"/build", "application/json", bytes.NewReader(body))
+	resp, err := ctxPost(t, srv.URL+"/build", "application/json", body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,7 +208,7 @@ func TestHandleBuildMissingFormat(t *testing.T) {
 		},
 	})
 
-	resp, err := http.Post(srv.URL+"/build", "application/json", bytes.NewReader(body))
+	resp, err := ctxPost(t, srv.URL+"/build", "application/json", body)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,7 @@
 package main_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -30,7 +31,12 @@ func TestMain(m *testing.M) {
 	_, testFile, _, _ := runtime.Caller(0)
 	moduleRoot := filepath.Join(filepath.Dir(testFile), "..", "..")
 
-	cmd := exec.Command("/usr/local/go/bin/go", "build", "-o", binaryPath, "./cmd/manifestor/")
+	goBin, err := exec.LookPath("go")
+	if err != nil {
+		// fallback: ask the runtime
+		goBin = filepath.Join(runtime.GOROOT(), "bin", "go")
+	}
+	cmd := exec.Command(goBin, "build", "-o", binaryPath, "./cmd/manifestor/")
 	cmd.Dir = moduleRoot
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -175,7 +181,8 @@ func TestServeRespondsToFilter(t *testing.T) {
 	// Wait for server to be ready.
 	var resp *http.Response
 	for i := 0; i < 20; i++ {
-		resp, err = http.Get("http://localhost:" + port + "/filter?url=" + upstream.URL + "/test.m3u8")
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://localhost:"+port+"/filter?url="+upstream.URL+"/test.m3u8", nil)
+		resp, err = http.DefaultClient.Do(req)
 		if err == nil {
 			break
 		}
