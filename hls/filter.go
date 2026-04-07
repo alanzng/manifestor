@@ -209,7 +209,11 @@ func rewriteURI(uri string, cfg *filterConfig) string {
 		return uri
 	}
 	if cfg.absoluteOrigin != "" && !u.IsAbs() {
-		base, err := url.Parse(cfg.absoluteOrigin)
+		origin := cfg.absoluteOrigin
+		if !strings.HasSuffix(origin, "/") {
+			origin += "/"
+		}
+		base, err := url.Parse(origin)
 		if err == nil {
 			u = base.ResolveReference(u)
 		}
