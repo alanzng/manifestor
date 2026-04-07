@@ -217,3 +217,335 @@ func TestHandleBuildMissingFormat(t *testing.T) {
 		t.Errorf("expected 400, got %d", resp.StatusCode)
 	}
 }
+
+// ---- Filter param validation ----
+
+func TestHandleFilterInvalidMaxRes(t *testing.T) {
+	srv := newTestServer()
+	defer srv.Close()
+	resp, err := ctxGet(t, srv.URL+"/filter?url=http://x.com/m.m3u8&max_res=bad")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleFilterInvalidMinRes(t *testing.T) {
+	srv := newTestServer()
+	defer srv.Close()
+	resp, err := ctxGet(t, srv.URL+"/filter?url=http://x.com/m.m3u8&min_res=bad")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleFilterInvalidMaxBw(t *testing.T) {
+	srv := newTestServer()
+	defer srv.Close()
+	resp, err := ctxGet(t, srv.URL+"/filter?url=http://x.com/m.m3u8&max_bw=notanint")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleFilterInvalidMinBw(t *testing.T) {
+	srv := newTestServer()
+	defer srv.Close()
+	resp, err := ctxGet(t, srv.URL+"/filter?url=http://x.com/m.m3u8&min_bw=notanint")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleFilterInvalidFps(t *testing.T) {
+	srv := newTestServer()
+	defer srv.Close()
+	resp, err := ctxGet(t, srv.URL+"/filter?url=http://x.com/m.m3u8&fps=notafloat")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleFilterNoVariantsRemain(t *testing.T) {
+	// HLS with only h265 — filtering for h264 leaves nothing.
+	hevcOnly := `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-STREAM-INF:BANDWIDTH=3000000,CODECS="hvc1.1.2.L120.90",RESOLUTION=1920x1080
+video-hevc.m3u8
+`
+	upstream := mockUpstream(hevcOnly)
+	defer upstream.Close()
+
+	srv := newTestServer()
+	defer srv.Close()
+
+	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/test.m3u8&codec=h264")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusUnprocessableEntity {
+		t.Errorf("expected 422, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleFilterFetchFailed(t *testing.T) {
+	srv := newTestServer()
+	defer srv.Close()
+	// Point to a non-existent server.
+	resp, err := ctxGet(t, srv.URL+"/filter?url=http://127.0.0.1:19999/no.m3u8")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadGateway {
+		t.Errorf("expected 502, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleFilterWithAllParams(t *testing.T) {
+	upstream := mockUpstream(sampleHLS)
+	defer upstream.Close()
+	srv := newTestServer()
+	defer srv.Close()
+
+	url := srv.URL + "/filter?url=" + upstream.URL + "/test.m3u8" +
+		"&codec=h264&max_res=1920x1080&min_res=480x270&max_bw=9000000&min_bw=100000&fps=60" +
+		"&cdn=https://cdn.example.com&token=secret&lang=en&origin=https://origin.example.com"
+	resp, err := ctxGet(t, url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	// May return 200 or 422 depending on filters — just ensure no 5xx.
+	if resp.StatusCode >= 500 {
+		t.Errorf("unexpected server error: %d", resp.StatusCode)
+	}
+}
+
+// ---- Build method/format validation ----
+
+func TestHandleBuildMethodNotAllowed(t *testing.T) {
+	srv := newTestServer()
+	defer srv.Close()
+	resp, err := ctxGet(t, srv.URL+"/build")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusMethodNotAllowed {
+		t.Errorf("expected 405, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleBuildInvalidJSON(t *testing.T) {
+	srv := newTestServer()
+	defer srv.Close()
+	resp, err := ctxPost(t, srv.URL+"/build", "application/json", []byte("{invalid json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleBuildUnknownFormat(t *testing.T) {
+	srv := newTestServer()
+	defer srv.Close()
+	body, _ := json.Marshal(map[string]interface{}{"format": "xml"})
+	resp, err := ctxPost(t, srv.URL+"/build", "application/json", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleBuildHLSEmptyVariants(t *testing.T) {
+	srv := newTestServer()
+	defer srv.Close()
+	body, _ := json.Marshal(map[string]interface{}{
+		"format":   "hls",
+		"variants": []interface{}{},
+	})
+	resp, err := ctxPost(t, srv.URL+"/build", "application/json", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusUnprocessableEntity {
+		t.Errorf("expected 422, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleBuildHLSWithAudioAndIFrames(t *testing.T) {
+	srv := newTestServer()
+	defer srv.Close()
+	body, _ := json.Marshal(map[string]interface{}{
+		"format":  "hls",
+		"version": 6,
+		"audio_tracks": []map[string]interface{}{
+			{"group_id": "audio-en", "name": "English", "language": "en", "default": true, "auto_select": true},
+		},
+		"iframes": []map[string]interface{}{
+			{"uri": "iframe.m3u8", "bandwidth": 500000},
+		},
+		"variants": []map[string]interface{}{
+			{"uri": "v.m3u8", "bandwidth": 3000000, "audio_group_id": "audio-en"},
+		},
+	})
+	resp, err := ctxPost(t, srv.URL+"/build", "application/json", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected 200, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleBuildDASHWithSegmentTemplate(t *testing.T) {
+	srv := newTestServer()
+	defer srv.Close()
+	body, _ := json.Marshal(map[string]interface{}{
+		"format":   "dash",
+		"profile":  "isoff-live",
+		"duration": "PT4M0.00S",
+		"adaptation_sets": []map[string]interface{}{
+			{
+				"content_type": "video",
+				"mime_type":    "video/mp4",
+				"segment_template": map[string]interface{}{
+					"initialization": "$RepresentationID$/init.mp4",
+					"media":          "$RepresentationID$/$Number$.m4s",
+					"timescale":      90000,
+					"duration":       270000,
+					"start_number":   1,
+				},
+				"representations": []map[string]interface{}{
+					{"id": "v1", "bandwidth": 3000000, "codecs": "avc1.640028"},
+				},
+			},
+		},
+	})
+	resp, err := ctxPost(t, srv.URL+"/build", "application/json", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected 200, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleBuildDASHWithSegmentBase(t *testing.T) {
+	srv := newTestServer()
+	defer srv.Close()
+	body, _ := json.Marshal(map[string]interface{}{
+		"format":  "dash",
+		"profile": "isoff-on-demand",
+		"adaptation_sets": []map[string]interface{}{
+			{
+				"content_type": "video",
+				"mime_type":    "video/mp4",
+				"segment_base": map[string]interface{}{
+					"index_range":    "0-819",
+					"initialization": "0-499",
+				},
+				"representations": []map[string]interface{}{
+					{"id": "v1", "bandwidth": 3000000},
+				},
+			},
+		},
+	})
+	resp, err := ctxPost(t, srv.URL+"/build", "application/json", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected 200, got %d", resp.StatusCode)
+	}
+	var buf bytes.Buffer
+	_, _ = buf.ReadFrom(resp.Body)
+	if !strings.Contains(buf.String(), "<MPD") {
+		t.Errorf("expected <MPD in output")
+	}
+}
+
+func TestHandleBuildWithPostTransforms(t *testing.T) {
+	srv := newTestServer()
+	defer srv.Close()
+	body, _ := json.Marshal(map[string]interface{}{
+		"format": "hls",
+		"variants": []map[string]interface{}{
+			{"uri": "https://origin.example.com/v.m3u8", "bandwidth": 3000000},
+		},
+		"cdn":   "https://cdn.example.com",
+		"token": "abc123",
+	})
+	resp, err := ctxPost(t, srv.URL+"/build", "application/json", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected 200, got %d", resp.StatusCode)
+	}
+	var buf bytes.Buffer
+	_, _ = buf.ReadFrom(resp.Body)
+	result := buf.String()
+	if !strings.Contains(result, "cdn.example.com") {
+		t.Errorf("expected CDN rewrite in output, got:\n%s", result)
+	}
+}
+
+func TestHandleBuildDASHContentType(t *testing.T) {
+	srv := newTestServer()
+	defer srv.Close()
+	body, _ := json.Marshal(map[string]interface{}{
+		"format":  "dash",
+		"profile": "isoff-on-demand",
+		"adaptation_sets": []map[string]interface{}{
+			{
+				"content_type": "video",
+				"mime_type":    "video/mp4",
+				"representations": []map[string]interface{}{
+					{"id": "v1", "bandwidth": 3000000},
+				},
+			},
+		},
+	})
+	resp, err := ctxPost(t, srv.URL+"/build", "application/json", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	ct := resp.Header.Get("Content-Type")
+	if !strings.Contains(ct, "dash+xml") {
+		t.Errorf("expected dash+xml content type, got %q", ct)
+	}
+}
