@@ -451,6 +451,22 @@ func TestFilter_WithCDNBaseURL_RelativeURI(t *testing.T) {
 
 // ---- WithInjectAdaptationSet ----
 
+func TestFilter_WithAbsoluteURIs_NoTrailingSlash(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	// Origin without trailing slash — transformer must still produce a valid absolute URL.
+	out, err := Filter(content, WithAbsoluteURIs("https://cdn.example.com/videos"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	r := m.Periods[0].AdaptationSets[0].Representations[0]
+	// The origin is treated as a base by appending "/" internally, so the
+	// resulting BaseURL must start with "https://cdn.example.com/videos/".
+	if !strings.HasPrefix(r.BaseURL, "https://cdn.example.com/videos/") {
+		t.Errorf("BaseURL = %q, want prefix https://cdn.example.com/videos/", r.BaseURL)
+	}
+}
+
 func TestFilter_WithInjectAdaptationSet(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
 	m0, _ := Parse(content)

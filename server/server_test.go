@@ -523,6 +523,78 @@ func TestHandleBuildWithPostTransforms(t *testing.T) {
 	}
 }
 
+func TestHandleFilterInvalidMaxResHeight(t *testing.T) {
+	// Use a mock upstream so that the /filter handler can reach parseResolution.
+	// The resolution check happens before the upstream fetch, so we can use any URL.
+	srv := newTestServer()
+	defer srv.Close()
+	resp, err := ctxGet(t, srv.URL+"/filter?url=http://x.com/m.m3u8&max_res=1920xabc")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400 for invalid height in max_res, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleBuildHLSWithSubtitles(t *testing.T) {
+	srv := newTestServer()
+	defer srv.Close()
+	body, _ := json.Marshal(map[string]interface{}{
+		"format":  "hls",
+		"version": 3,
+		"subtitles": []map[string]interface{}{
+			{
+				"group_id": "subs",
+				"name":     "English",
+				"language": "en",
+				"uri":      "en.vtt",
+				"default":  true,
+			},
+		},
+		"variants": []map[string]interface{}{
+			{
+				"uri":               "v.m3u8",
+				"bandwidth":         3000000,
+				"subtitle_group_id": "subs",
+			},
+		},
+	})
+	resp, err := ctxPost(t, srv.URL+"/build", "application/json", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected 200, got %d", resp.StatusCode)
+	}
+	var buf bytes.Buffer
+	_, _ = buf.ReadFrom(resp.Body)
+	result := buf.String()
+	if !strings.Contains(result, "TYPE=SUBTITLES") {
+		t.Errorf("expected TYPE=SUBTITLES in output, got:\n%s", result)
+	}
+}
+
+func TestHandleBuildDASHEmptyAdaptationSets(t *testing.T) {
+	srv := newTestServer()
+	defer srv.Close()
+	// Send a DASH request with empty adaptation_sets — should get ErrEmptyVariantList → 422.
+	body, _ := json.Marshal(map[string]interface{}{
+		"format":          "dash",
+		"adaptation_sets": []interface{}{},
+	})
+	resp, err := ctxPost(t, srv.URL+"/build", "application/json", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusUnprocessableEntity {
+		t.Errorf("expected 422 for empty DASH adaptation_sets, got %d", resp.StatusCode)
+	}
+}
+
 func TestHandleBuildDASHContentType(t *testing.T) {
 	srv := newTestServer()
 	defer srv.Close()

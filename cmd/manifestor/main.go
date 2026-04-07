@@ -13,6 +13,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -55,7 +56,17 @@ Run 'manifestor <command> --help' for command-specific flags.`)
 }
 
 func runFilter(args []string) {
-	fs := flag.NewFlagSet("filter", flag.ExitOnError)
+	if err := filterManifest(args, os.Stdout); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+// filterManifest implements the filter subcommand logic. It writes the filtered
+// manifest to stdout (or to the --output file). Returns an error instead of
+// calling os.Exit so that it can be tested without spawning a subprocess.
+func filterManifest(args []string, stdout io.Writer) error {
+	fs := flag.NewFlagSet("filter", flag.ContinueOnError)
 	urlFlag := fs.String("url", "", "upstream manifest URL")
 	input := fs.String("input", "", "local manifest file path")
 	output := fs.String("output", "", "output file (default: stdout)")
@@ -69,16 +80,16 @@ func runFilter(args []string) {
 	token := fs.String("token", "", "auth token appended to URIs")
 	lang := fs.String("lang", "", "audio language filter (BCP-47)")
 	origin := fs.String("origin", "", "resolve relative URIs against this origin")
-	_ = fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 
 	// Validate: exactly one of --url or --input.
 	if *urlFlag == "" && *input == "" {
-		fmt.Fprintln(os.Stderr, "error: one of --url or --input is required")
-		os.Exit(1)
+		return fmt.Errorf("one of --url or --input is required")
 	}
 	if *urlFlag != "" && *input != "" {
-		fmt.Fprintln(os.Stderr, "error: --url and --input are mutually exclusive")
-		os.Exit(1)
+		return fmt.Errorf("--url and --input are mutually exclusive")
 	}
 
 	// Build options.
@@ -89,16 +100,14 @@ func runFilter(args []string) {
 	if *maxRes != "" {
 		w, h, err := parseResolution(*maxRes)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: invalid --max-res %q: %v\n", *maxRes, err)
-			os.Exit(1)
+			return fmt.Errorf("invalid --max-res %q: %w", *maxRes, err)
 		}
 		opts = append(opts, manifest.WithMaxResolution(w, h))
 	}
 	if *minRes != "" {
 		w, h, err := parseResolution(*minRes)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: invalid --min-res %q: %v\n", *minRes, err)
-			os.Exit(1)
+			return fmt.Errorf("invalid --min-res %q: %w", *minRes, err)
 		}
 		opts = append(opts, manifest.WithMinResolution(w, h))
 	}
@@ -134,22 +143,31 @@ func runFilter(args []string) {
 	}
 	if err != nil {
 		if errors.Is(err, manifest.ErrNoVariantsRemain) {
-			fmt.Fprintln(os.Stderr, "error: no variants remain after filtering — try relaxing your filter options")
-		} else {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			return fmt.Errorf("no variants remain after filtering — try relaxing your filter options")
 		}
-		os.Exit(1)
+		return err
 	}
 
 	// Write output.
-	if err := writeOutput(*output, result); err != nil {
-		fmt.Fprintf(os.Stderr, "error writing output: %v\n", err)
+	if *output != "" {
+		return os.WriteFile(*output, []byte(result), 0o644)
+	}
+	_, err = fmt.Fprint(stdout, result)
+	return err
+}
+
+func runBuild(args []string) {
+	if err := buildManifest(args, os.Stdout); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func runBuild(args []string) {
-	fs := flag.NewFlagSet("build", flag.ExitOnError)
+// buildManifest implements the build subcommand logic. It writes the built
+// manifest to stdout (or to the --output file). Returns an error instead of
+// calling os.Exit so that it can be tested without spawning a subprocess.
+func buildManifest(args []string, stdout io.Writer) error {
+	fs := flag.NewFlagSet("build", flag.ContinueOnError)
 	format := fs.String("format", "", "manifest format: hls|dash (required)")
 	output := fs.String("output", "", "output file (default: stdout)")
 	variants := fs.String("variants", "", "path to JSON spec file")
@@ -158,27 +176,25 @@ func runBuild(args []string) {
 	profile := fs.String("profile", "", "DASH profile: ondemand|live (DASH only)")
 	cdn := fs.String("cdn", "", "CDN base URL applied after building")
 	token := fs.String("token", "", "auth token appended to all URIs after building")
-	_ = fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 
 	if *format == "" {
-		fmt.Fprintln(os.Stderr, "error: --format is required (hls or dash)")
-		os.Exit(1)
+		return fmt.Errorf("--format is required (hls or dash)")
 	}
 	if *variants == "" {
-		fmt.Fprintln(os.Stderr, "error: --variants JSON file is required")
-		os.Exit(1)
+		return fmt.Errorf("--variants JSON file is required")
 	}
 
 	data, err := os.ReadFile(*variants)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error reading variants file: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("reading variants file: %w", err)
 	}
 
 	var req buildRequest
 	if err := json.Unmarshal(data, &req); err != nil {
-		fmt.Fprintf(os.Stderr, "error parsing variants JSON: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("parsing variants JSON: %w", err)
 	}
 
 	// CLI flags override JSON fields.
@@ -202,12 +218,10 @@ func runBuild(args []string) {
 	case "dash":
 		result, err = buildDASH(&req)
 	default:
-		fmt.Fprintf(os.Stderr, "error: unknown format %q (use hls or dash)\n", *format)
-		os.Exit(1)
+		return fmt.Errorf("unknown format %q (use hls or dash)", *format)
 	}
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error building manifest: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("building manifest: %w", err)
 	}
 
 	// Post-build transforms.
@@ -221,15 +235,15 @@ func runBuild(args []string) {
 		}
 		result, err = manifest.Filter(result, postOpts...)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error applying post-build transforms: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("applying post-build transforms: %w", err)
 		}
 	}
 
-	if err := writeOutput(*output, result); err != nil {
-		fmt.Fprintf(os.Stderr, "error writing output: %v\n", err)
-		os.Exit(1)
+	if *output != "" {
+		return os.WriteFile(*output, []byte(result), 0o644)
 	}
+	_, err = fmt.Fprint(stdout, result)
+	return err
 }
 
 func runServe(args []string) {
