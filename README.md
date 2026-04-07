@@ -384,8 +384,8 @@ Tested against real-world output from:
             <td><strong>Vieon</strong></td>
             <td align="center">
                 <picture>
-                    <source media="(prefers-color-scheme: dark)" srcset="docs/vieon-logo-dark.svg" />
-                    <img height="32px" src="docs/vieon-logo-light.svg" alt="Vieon" />
+                    <source media="(prefers-color-scheme: dark)" srcset="docs/images/vieon-logo-dark.svg" />
+                    <img height="32px" src="docs/images/vieon-logo-light.svg" alt="Vieon" />
                 </picture>
             </td>
             <td><a href="https://vieon.vn/">vieon.vn</a></td>
