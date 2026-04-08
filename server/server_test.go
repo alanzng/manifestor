@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -619,5 +620,69 @@ func TestHandleBuildDASHContentType(t *testing.T) {
 	ct := resp.Header.Get("Content-Type")
 	if !strings.Contains(ct, "dash+xml") {
 		t.Errorf("expected dash+xml content type, got %q", ct)
+	}
+}
+
+func TestParseResolution_InvalidWidth(t *testing.T) {
+	// "ABCx720" — width is not a number.
+	srv := newTestServer()
+	defer srv.Close()
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1000000\nv.m3u8\n"))
+	}))
+	defer upstream.Close()
+
+	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/p.m3u8&max_res=ABCx720")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400 for invalid resolution width, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleBuild_PostBuildWithToken(t *testing.T) {
+	// Token on a build request triggers post-build transform.
+	srv := newTestServer()
+	defer srv.Close()
+	body, _ := json.Marshal(map[string]interface{}{
+		"format": "hls",
+		"token":  "mytoken",
+		"variants": []map[string]interface{}{
+			{"uri": "https://origin.example.com/v.m3u8", "bandwidth": 3000000},
+		},
+	})
+	resp, err := ctxPost(t, srv.URL+"/build", "application/json", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected 200, got %d", resp.StatusCode)
+	}
+	b, _ := io.ReadAll(resp.Body)
+	if !strings.Contains(string(b), "mytoken") {
+		t.Errorf("expected token in output, got:\n%s", b)
+	}
+}
+
+func TestHandleFilter_GenericBadGateway(t *testing.T) {
+	// Serve an unparseable manifest to trigger the generic 502 (not ErrFetchFailed).
+	srv := newTestServer()
+	defer srv.Close()
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Return garbage — not valid HLS or DASH.
+		w.Write([]byte("NOT_A_MANIFEST"))
+	}))
+	defer upstream.Close()
+
+	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/p.m3u8")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadGateway {
+		t.Errorf("expected 502 for unparseable manifest, got %d", resp.StatusCode)
 	}
 }
