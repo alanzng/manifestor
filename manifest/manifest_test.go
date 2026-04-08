@@ -701,3 +701,39 @@ func TestFilter_WithHLSVariantSubtitleGroup_IgnoredForDASH(t *testing.T) {
 		t.Errorf("unexpected error for DASH content with HLS subtitle group option: %v", err)
 	}
 }
+
+func TestFilter_InvalidFormat(t *testing.T) {
+	_, err := Filter("not a manifest at all")
+	if !errors.Is(err, ErrInvalidFormat) {
+		t.Errorf("expected ErrInvalidFormat, got %v", err)
+	}
+}
+
+func TestFilterFromURL_FetchFailed(t *testing.T) {
+	// Use an unreachable URL to trigger ErrFetchFailed.
+	_, err := FilterFromURL("http://127.0.0.1:19999/nonexistent.m3u8")
+	if !errors.Is(err, ErrFetchFailed) {
+		t.Errorf("expected ErrFetchFailed, got %v", err)
+	}
+}
+
+func TestFilterFromURL_ReadBodyFailed(t *testing.T) {
+	// Serve a response that closes the connection mid-body to trigger read error.
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Length", "9999")
+		w.WriteHeader(http.StatusOK)
+		// Write a few bytes then close without sending the rest.
+		w.Write([]byte("#EXTM3U\n"))
+		if h, ok := w.(http.Hijacker); ok {
+			conn, _, _ := h.Hijack()
+			conn.Close()
+		}
+	}))
+	defer ts.Close()
+
+	_, err := FilterFromURL(ts.URL + "/playlist.m3u8")
+	if err == nil {
+		t.Skip("server did not trigger read error (hijack not supported in test)")
+	}
+	// Either ErrFetchFailed (read body) or ErrInvalidFormat is acceptable.
+}

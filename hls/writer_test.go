@@ -272,3 +272,57 @@ func TestSerialize_ForcedSubtitle(t *testing.T) {
 		t.Error("re-parsed Forced = false, want true")
 	}
 }
+
+func TestSerialize_RawLines_Direct(t *testing.T) {
+	// Directly build a MasterPlaylist with Raw lines and verify they're preserved.
+	p := &MasterPlaylist{
+		Raw: []string{"#EXT-X-CUSTOM-TAG:value"},
+		Variants: []Variant{
+			{URI: "v.m3u8", Bandwidth: 1000000},
+		},
+	}
+	out, err := Serialize(p)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "#EXT-X-CUSTOM-TAG:value") {
+		t.Errorf("expected raw line in output:\n%s", out)
+	}
+}
+
+func TestSerialize_MediaTrack_EmptyTypeFallsBackToAudio(t *testing.T) {
+	// Type == "" should emit TYPE=AUDIO in output.
+	p := &MasterPlaylist{
+		AudioTracks: []MediaTrack{
+			{Type: "", GroupID: "aud", Name: "English", Language: "en",
+				URI: "audio.m3u8", Default: true, AutoSelect: true},
+		},
+		Variants: []Variant{
+			{URI: "v.m3u8", Bandwidth: 1000000, AudioGroupID: "aud"},
+		},
+	}
+	out, err := Serialize(p)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "TYPE=AUDIO") {
+		t.Errorf("expected TYPE=AUDIO in output when Type is empty:\n%s", out)
+	}
+}
+
+func TestSerialize_HDCPLevel(t *testing.T) {
+	// HDCPLevel should be emitted for a variant.
+	p := &MasterPlaylist{
+		Variants: []Variant{
+			{URI: "v.m3u8", Bandwidth: 5000000, Width: 3840, Height: 2160,
+				Codecs: "hvc1.1.2.L153.90", HDCPLevel: "TYPE-1"},
+		},
+	}
+	out, err := Serialize(p)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "HDCP-LEVEL=TYPE-1") {
+		t.Errorf("expected HDCP-LEVEL=TYPE-1 in output:\n%s", out)
+	}
+}

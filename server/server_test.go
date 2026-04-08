@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -523,6 +524,78 @@ func TestHandleBuildWithPostTransforms(t *testing.T) {
 	}
 }
 
+func TestHandleFilterInvalidMaxResHeight(t *testing.T) {
+	// Use a mock upstream so that the /filter handler can reach parseResolution.
+	// The resolution check happens before the upstream fetch, so we can use any URL.
+	srv := newTestServer()
+	defer srv.Close()
+	resp, err := ctxGet(t, srv.URL+"/filter?url=http://x.com/m.m3u8&max_res=1920xabc")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400 for invalid height in max_res, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleBuildHLSWithSubtitles(t *testing.T) {
+	srv := newTestServer()
+	defer srv.Close()
+	body, _ := json.Marshal(map[string]interface{}{
+		"format":  "hls",
+		"version": 3,
+		"subtitles": []map[string]interface{}{
+			{
+				"group_id": "subs",
+				"name":     "English",
+				"language": "en",
+				"uri":      "en.vtt",
+				"default":  true,
+			},
+		},
+		"variants": []map[string]interface{}{
+			{
+				"uri":               "v.m3u8",
+				"bandwidth":         3000000,
+				"subtitle_group_id": "subs",
+			},
+		},
+	})
+	resp, err := ctxPost(t, srv.URL+"/build", "application/json", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected 200, got %d", resp.StatusCode)
+	}
+	var buf bytes.Buffer
+	_, _ = buf.ReadFrom(resp.Body)
+	result := buf.String()
+	if !strings.Contains(result, "TYPE=SUBTITLES") {
+		t.Errorf("expected TYPE=SUBTITLES in output, got:\n%s", result)
+	}
+}
+
+func TestHandleBuildDASHEmptyAdaptationSets(t *testing.T) {
+	srv := newTestServer()
+	defer srv.Close()
+	// Send a DASH request with empty adaptation_sets — should get ErrEmptyVariantList → 422.
+	body, _ := json.Marshal(map[string]interface{}{
+		"format":          "dash",
+		"adaptation_sets": []interface{}{},
+	})
+	resp, err := ctxPost(t, srv.URL+"/build", "application/json", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusUnprocessableEntity {
+		t.Errorf("expected 422 for empty DASH adaptation_sets, got %d", resp.StatusCode)
+	}
+}
+
 func TestHandleBuildDASHContentType(t *testing.T) {
 	srv := newTestServer()
 	defer srv.Close()
@@ -547,5 +620,69 @@ func TestHandleBuildDASHContentType(t *testing.T) {
 	ct := resp.Header.Get("Content-Type")
 	if !strings.Contains(ct, "dash+xml") {
 		t.Errorf("expected dash+xml content type, got %q", ct)
+	}
+}
+
+func TestParseResolution_InvalidWidth(t *testing.T) {
+	// "ABCx720" — width is not a number.
+	srv := newTestServer()
+	defer srv.Close()
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1000000\nv.m3u8\n"))
+	}))
+	defer upstream.Close()
+
+	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/p.m3u8&max_res=ABCx720")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400 for invalid resolution width, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleBuild_PostBuildWithToken(t *testing.T) {
+	// Token on a build request triggers post-build transform.
+	srv := newTestServer()
+	defer srv.Close()
+	body, _ := json.Marshal(map[string]interface{}{
+		"format": "hls",
+		"token":  "mytoken",
+		"variants": []map[string]interface{}{
+			{"uri": "https://origin.example.com/v.m3u8", "bandwidth": 3000000},
+		},
+	})
+	resp, err := ctxPost(t, srv.URL+"/build", "application/json", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected 200, got %d", resp.StatusCode)
+	}
+	b, _ := io.ReadAll(resp.Body)
+	if !strings.Contains(string(b), "mytoken") {
+		t.Errorf("expected token in output, got:\n%s", b)
+	}
+}
+
+func TestHandleFilter_GenericBadGateway(t *testing.T) {
+	// Serve an unparseable manifest to trigger the generic 502 (not ErrFetchFailed).
+	srv := newTestServer()
+	defer srv.Close()
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Return garbage — not valid HLS or DASH.
+		w.Write([]byte("NOT_A_MANIFEST"))
+	}))
+	defer upstream.Close()
+
+	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/p.m3u8")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadGateway {
+		t.Errorf("expected 502 for unparseable manifest, got %d", resp.StatusCode)
 	}
 }

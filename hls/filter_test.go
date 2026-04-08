@@ -570,3 +570,120 @@ func TestRewriteURI_MalformedAbsoluteOrigin_RelativeURIUnchanged(t *testing.T) {
 		t.Errorf("expected relative URI unchanged on bad origin, got %q", got)
 	}
 }
+
+// ---- iframePasses coverage ----
+
+func TestFilter_IFrame_MinResolution(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	out, err := Filter(content, WithMinResolution(1280, 720))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	p, _ := Parse(out)
+	for _, f := range p.IFrames {
+		if f.Width > 0 && f.Width < 1280 {
+			t.Errorf("iframe %q resolution %dx%d below min 1280x720", f.URI, f.Width, f.Height)
+		}
+	}
+}
+
+func TestFilter_IFrame_ExactResolution(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	out, err := Filter(content, WithExactResolution(1280, 720))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	p, _ := Parse(out)
+	for _, f := range p.IFrames {
+		if f.Width > 0 && (f.Width != 1280 || f.Height != 720) {
+			t.Errorf("iframe %q has resolution %dx%d, want 1280x720", f.URI, f.Width, f.Height)
+		}
+	}
+}
+
+func TestFilter_IFrame_MinBandwidth(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	out, err := Filter(content, WithMinBandwidth(2000000))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	p, _ := Parse(out)
+	for _, f := range p.IFrames {
+		if f.Bandwidth > 0 && f.Bandwidth < 2000000 {
+			t.Errorf("iframe %q bandwidth %d below min 2000000", f.URI, f.Bandwidth)
+		}
+	}
+}
+
+func TestFilter_WithMimeType_NoOp(t *testing.T) {
+	// hls.WithMimeType is a no-op for HLS (mime filtering is DASH-only),
+	// but the option must be constructable without panic.
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	_, err := Filter(content, WithMimeType("video/mp4"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// ---- variantPasses / iframePasses height-only branch coverage ----
+
+func TestVariantPasses_MaxHeightOnly(t *testing.T) {
+	// Width is within limit but height exceeds it — exercises maxHeight return false
+	// without being short-circuited by maxWidth.
+	v := &Variant{Width: 1280, Height: 1080, Bandwidth: 3000000}
+	cfg := &filterConfig{maxWidth: 9999, maxHeight: 720}
+	if variantPasses(v, cfg) {
+		t.Error("expected variant to be filtered by maxHeight")
+	}
+}
+
+func TestVariantPasses_MinHeightOnly(t *testing.T) {
+	// Width is within limit but height is below minimum — exercises minHeight return false.
+	v := &Variant{Width: 9999, Height: 360, Bandwidth: 3000000}
+	cfg := &filterConfig{minWidth: 0, minHeight: 720}
+	if variantPasses(v, cfg) {
+		t.Error("expected variant to be filtered by minHeight")
+	}
+}
+
+func TestVariantPasses_ExactHeightOnly(t *testing.T) {
+	// exactWidth matches but exactHeight does not — exercises exactHeight return false.
+	v := &Variant{Width: 1280, Height: 360, Bandwidth: 3000000}
+	cfg := &filterConfig{exactWidth: 1280, exactHeight: 720}
+	if variantPasses(v, cfg) {
+		t.Error("expected variant to be filtered by exactHeight mismatch")
+	}
+}
+
+func TestIFramePasses_MaxHeightOnly(t *testing.T) {
+	// Width is within limit but height exceeds it — exercises maxHeight return false on iframes.
+	f := &IFrameStream{Width: 1280, Height: 1080, Bandwidth: 3000000}
+	cfg := &filterConfig{maxWidth: 9999, maxHeight: 720}
+	if iframePasses(f, cfg) {
+		t.Error("expected iframe to be filtered by maxHeight")
+	}
+}
+
+func TestIFramePasses_MinHeightOnly(t *testing.T) {
+	f := &IFrameStream{Width: 9999, Height: 360, Bandwidth: 3000000}
+	cfg := &filterConfig{minWidth: 0, minHeight: 720}
+	if iframePasses(f, cfg) {
+		t.Error("expected iframe to be filtered by minHeight")
+	}
+}
+
+func TestIFramePasses_ExactHeightMismatch(t *testing.T) {
+	f := &IFrameStream{Width: 1280, Height: 360, Bandwidth: 3000000}
+	cfg := &filterConfig{exactWidth: 1280, exactHeight: 720}
+	if iframePasses(f, cfg) {
+		t.Error("expected iframe to be filtered by exactHeight mismatch")
+	}
+}
+
+func TestIFramePasses_ExactWidthMismatch(t *testing.T) {
+	f := &IFrameStream{Width: 1920, Height: 720, Bandwidth: 3000000}
+	cfg := &filterConfig{exactWidth: 1280, exactHeight: 720}
+	if iframePasses(f, cfg) {
+		t.Error("expected iframe to be filtered by exactWidth mismatch")
+	}
+}

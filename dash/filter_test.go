@@ -451,6 +451,22 @@ func TestFilter_WithCDNBaseURL_RelativeURI(t *testing.T) {
 
 // ---- WithInjectAdaptationSet ----
 
+func TestFilter_WithAbsoluteURIs_NoTrailingSlash(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	// Origin without trailing slash — transformer must still produce a valid absolute URL.
+	out, err := Filter(content, WithAbsoluteURIs("https://cdn.example.com/videos"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	r := m.Periods[0].AdaptationSets[0].Representations[0]
+	// The origin is treated as a base by appending "/" internally, so the
+	// resulting BaseURL must start with "https://cdn.example.com/videos/".
+	if !strings.HasPrefix(r.BaseURL, "https://cdn.example.com/videos/") {
+		t.Errorf("BaseURL = %q, want prefix https://cdn.example.com/videos/", r.BaseURL)
+	}
+}
+
 func TestFilter_WithInjectAdaptationSet(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
 	m0, _ := Parse(content)
@@ -483,5 +499,178 @@ func TestFilter_WithInjectAdaptationSet(t *testing.T) {
 	}
 	if injected.Representations[0].BaseURL != "https://cdn.example.com/sub-en.vtt" {
 		t.Errorf("injected BaseURL = %q", injected.Representations[0].BaseURL)
+	}
+}
+
+// ---- isTextAdaptationSet coverage ----
+
+func TestFilter_TextAdaptationSet_ExcludedFromCodecFilter(t *testing.T) {
+	// A text/subtitle AdaptationSet should survive a codec filter that would
+	// otherwise reject its representations (codec filter skips text sets).
+	mpd := `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static">
+  <Period>
+    <AdaptationSet contentType="video" mimeType="video/mp4">
+      <Representation id="v1" bandwidth="3000000" codecs="avc1.640028"/>
+    </AdaptationSet>
+    <AdaptationSet contentType="text" mimeType="text/vtt">
+      <Representation id="t1" bandwidth="1000" codecs="wvtt"/>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	out, err := Filter(mpd, WithCodec("h264"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	if len(m.Periods[0].AdaptationSets) != 2 {
+		t.Errorf("expected 2 AdaptationSets (video + text), got %d", len(m.Periods[0].AdaptationSets))
+	}
+}
+
+func TestFilter_TextAdaptationSet_ByMimeType(t *testing.T) {
+	// isTextAdaptationSet via MimeType prefix "text/" (no ContentType set).
+	mpd := `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static">
+  <Period>
+    <AdaptationSet mimeType="video/mp4">
+      <Representation id="v1" bandwidth="3000000" codecs="avc1.640028"/>
+    </AdaptationSet>
+    <AdaptationSet mimeType="text/vtt">
+      <Representation id="t1" bandwidth="1000" codecs="wvtt"/>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	out, err := Filter(mpd, WithCodec("h264"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	if len(m.Periods[0].AdaptationSets) != 2 {
+		t.Errorf("expected 2 AdaptationSets (video + text/vtt), got %d", len(m.Periods[0].AdaptationSets))
+	}
+}
+
+func TestFilter_RepresentationInheritsMimeType(t *testing.T) {
+	// Representation has no MimeType; it should inherit from AdaptationSet.
+	// WithMimeType("video/mp4") should keep the video rep and drop the audio set.
+	mpd := `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static">
+  <Period>
+    <AdaptationSet contentType="video" mimeType="video/mp4">
+      <Representation id="v1" bandwidth="3000000" codecs="avc1.640028"/>
+    </AdaptationSet>
+    <AdaptationSet contentType="audio" mimeType="audio/mp4">
+      <Representation id="a1" bandwidth="128000"/>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	out, err := Filter(mpd, WithMimeType("video/mp4"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	if len(m.Periods[0].AdaptationSets) != 1 {
+		t.Errorf("expected 1 AdaptationSet after mime filter, got %d", len(m.Periods[0].AdaptationSets))
+	}
+}
+
+func TestFilter_ParseFrameRate_DenominatorZero(t *testing.T) {
+	// parseFrameRate("30/0") should return 0 (den==0 guard).
+	fps := parseFrameRate("30/0")
+	if fps != 0 {
+		t.Errorf("parseFrameRate(\"30/0\") = %f, want 0", fps)
+	}
+}
+
+// ---- representationPasses height-only and mime-inheritance coverage ----
+
+func TestFilter_DASH_MaxHeightOnly(t *testing.T) {
+	// Width is within maxWidth limit but height exceeds maxHeight.
+	mpd := `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static">
+  <Period>
+    <AdaptationSet contentType="video" mimeType="video/mp4">
+      <Representation id="v1" bandwidth="3000000" width="1280" height="1080" codecs="avc1.640028"/>
+      <Representation id="v2" bandwidth="1000000" width="1280" height="720" codecs="avc1.64001F"/>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	out, err := Filter(mpd, WithMaxResolution(9999, 720))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	if len(m.Periods[0].AdaptationSets[0].Representations) != 1 {
+		t.Errorf("expected 1 representation after maxHeight filter, got %d", len(m.Periods[0].AdaptationSets[0].Representations))
+	}
+}
+
+func TestFilter_DASH_MinHeightOnly(t *testing.T) {
+	// Width is above minWidth but height is below minHeight.
+	mpd := `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static">
+  <Period>
+    <AdaptationSet contentType="video" mimeType="video/mp4">
+      <Representation id="v1" bandwidth="3000000" width="1280" height="360" codecs="avc1.640028"/>
+      <Representation id="v2" bandwidth="1000000" width="1280" height="720" codecs="avc1.64001F"/>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	out, err := Filter(mpd, WithMinResolution(0, 720))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	if len(m.Periods[0].AdaptationSets[0].Representations) != 1 {
+		t.Errorf("expected 1 representation after minHeight filter, got %d", len(m.Periods[0].AdaptationSets[0].Representations))
+	}
+}
+
+func TestFilter_DASH_ExactHeightOnly(t *testing.T) {
+	// exactWidth matches but exactHeight does not.
+	mpd := `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static">
+  <Period>
+    <AdaptationSet contentType="video" mimeType="video/mp4">
+      <Representation id="v1" bandwidth="3000000" width="1280" height="360" codecs="avc1.640028"/>
+      <Representation id="v2" bandwidth="1000000" width="1280" height="720" codecs="avc1.64001F"/>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	out, err := Filter(mpd, WithExactResolution(1280, 720))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	if len(m.Periods[0].AdaptationSets[0].Representations) != 1 {
+		t.Errorf("expected 1 representation after exactHeight filter, got %d", len(m.Periods[0].AdaptationSets[0].Representations))
+	}
+}
+
+func TestFilter_DASH_MimeInheritedFromAdaptationSet(t *testing.T) {
+	// Representation has no MimeType — inherits from AdaptationSet.
+	// WithMimeType("audio/mp4") should keep only audio reps.
+	mpd := `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static">
+  <Period>
+    <AdaptationSet contentType="video" mimeType="video/mp4">
+      <Representation id="v1" bandwidth="3000000" codecs="avc1.640028"/>
+    </AdaptationSet>
+    <AdaptationSet contentType="audio" mimeType="audio/mp4">
+      <Representation id="a1" bandwidth="128000"/>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	out, err := Filter(mpd, WithMimeType("audio/mp4"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	if len(m.Periods[0].AdaptationSets) != 1 {
+		t.Errorf("expected 1 AdaptationSet after mime filter, got %d", len(m.Periods[0].AdaptationSets))
+	}
+	if m.Periods[0].AdaptationSets[0].ContentType != "audio" {
+		t.Errorf("expected audio AdaptationSet to survive")
 	}
 }
