@@ -454,3 +454,37 @@ func TestParse_Bento4Mixed_AudioChannelConfiguration(t *testing.T) {
 		t.Errorf("Value = %q, want 2", r.AudioChannelConfiguration.Value)
 	}
 }
+
+func TestParse_SegmentBase(t *testing.T) {
+	mpd := `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static">
+  <Period>
+    <AdaptationSet mimeType="video/mp4" contentType="video">
+      <SegmentBase indexRange="0-819">
+        <Initialization sourceURL="init.mp4"/>
+      </SegmentBase>
+      <Representation id="v1" bandwidth="3000000"/>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	m, err := Parse(mpd)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(m.Periods) == 0 || len(m.Periods[0].AdaptationSets) == 0 {
+		t.Fatal("expected adaptation set")
+	}
+	as := m.Periods[0].AdaptationSets[0]
+	if len(as.Representations) == 0 {
+		t.Fatal("expected representation")
+	}
+	if as.SegmentBase == nil {
+		t.Fatal("expected SegmentBase to be parsed on AdaptationSet")
+	}
+	if as.SegmentBase.IndexRange != "0-819" {
+		t.Errorf("IndexRange = %q, want 0-819", as.SegmentBase.IndexRange)
+	}
+	if as.SegmentBase.Initialization != "init.mp4" {
+		t.Errorf("Initialization = %q, want init.mp4", as.SegmentBase.Initialization)
+	}
+}

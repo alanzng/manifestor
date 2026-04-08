@@ -570,3 +570,57 @@ func TestRewriteURI_MalformedAbsoluteOrigin_RelativeURIUnchanged(t *testing.T) {
 		t.Errorf("expected relative URI unchanged on bad origin, got %q", got)
 	}
 }
+
+// ---- iframePasses coverage ----
+
+func TestFilter_IFrame_MinResolution(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	out, err := Filter(content, WithMinResolution(1280, 720))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	p, _ := Parse(out)
+	for _, f := range p.IFrames {
+		if f.Width > 0 && f.Width < 1280 {
+			t.Errorf("iframe %q resolution %dx%d below min 1280x720", f.URI, f.Width, f.Height)
+		}
+	}
+}
+
+func TestFilter_IFrame_ExactResolution(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	out, err := Filter(content, WithExactResolution(1280, 720))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	p, _ := Parse(out)
+	for _, f := range p.IFrames {
+		if f.Width > 0 && (f.Width != 1280 || f.Height != 720) {
+			t.Errorf("iframe %q has resolution %dx%d, want 1280x720", f.URI, f.Width, f.Height)
+		}
+	}
+}
+
+func TestFilter_IFrame_MinBandwidth(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	out, err := Filter(content, WithMinBandwidth(2000000))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	p, _ := Parse(out)
+	for _, f := range p.IFrames {
+		if f.Bandwidth > 0 && f.Bandwidth < 2000000 {
+			t.Errorf("iframe %q bandwidth %d below min 2000000", f.URI, f.Bandwidth)
+		}
+	}
+}
+
+func TestFilter_WithMimeType_NoOp(t *testing.T) {
+	// hls.WithMimeType is a no-op for HLS (mime filtering is DASH-only),
+	// but the option must be constructable without panic.
+	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
+	_, err := Filter(content, WithMimeType("video/mp4"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

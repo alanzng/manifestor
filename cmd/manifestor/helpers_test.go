@@ -510,3 +510,31 @@ func TestBuildManifest_HLSOutputFile(t *testing.T) {
 		t.Errorf("expected #EXTM3U in output file, got:\n%s", data)
 	}
 }
+
+func TestBuildManifest_WithCDN(t *testing.T) {
+	// Use absolute URIs so CDN rewrite has effect.
+	spec := `{"format":"hls","variants":[{"uri":"https://origin.example.com/v.m3u8","bandwidth":3000000}]}`
+	f, _ := os.CreateTemp(t.TempDir(), "*.json")
+	_, _ = f.WriteString(spec)
+	_ = f.Close()
+	var buf bytes.Buffer
+	err := buildManifest([]string{"--format", "hls", "--variants", f.Name(), "--cdn", "https://cdn.example.com"}, &buf)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(buf.String(), "cdn.example.com") {
+		t.Errorf("expected CDN rewrite in output, got:\n%s", buf.String())
+	}
+}
+
+func TestBuildManifest_DASHWithProfile(t *testing.T) {
+	fixture := testFixture("build", "dash_simple.json")
+	var buf bytes.Buffer
+	err := buildManifest([]string{"--format", "dash", "--variants", fixture, "--profile", "isoff-live"}, &buf)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(buf.String(), "<MPD") {
+		t.Errorf("expected <MPD in output")
+	}
+}
