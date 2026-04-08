@@ -582,3 +582,95 @@ func TestFilter_ParseFrameRate_DenominatorZero(t *testing.T) {
 		t.Errorf("parseFrameRate(\"30/0\") = %f, want 0", fps)
 	}
 }
+
+// ---- representationPasses height-only and mime-inheritance coverage ----
+
+func TestFilter_DASH_MaxHeightOnly(t *testing.T) {
+	// Width is within maxWidth limit but height exceeds maxHeight.
+	mpd := `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static">
+  <Period>
+    <AdaptationSet contentType="video" mimeType="video/mp4">
+      <Representation id="v1" bandwidth="3000000" width="1280" height="1080" codecs="avc1.640028"/>
+      <Representation id="v2" bandwidth="1000000" width="1280" height="720" codecs="avc1.64001F"/>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	out, err := Filter(mpd, WithMaxResolution(9999, 720))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	if len(m.Periods[0].AdaptationSets[0].Representations) != 1 {
+		t.Errorf("expected 1 representation after maxHeight filter, got %d", len(m.Periods[0].AdaptationSets[0].Representations))
+	}
+}
+
+func TestFilter_DASH_MinHeightOnly(t *testing.T) {
+	// Width is above minWidth but height is below minHeight.
+	mpd := `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static">
+  <Period>
+    <AdaptationSet contentType="video" mimeType="video/mp4">
+      <Representation id="v1" bandwidth="3000000" width="1280" height="360" codecs="avc1.640028"/>
+      <Representation id="v2" bandwidth="1000000" width="1280" height="720" codecs="avc1.64001F"/>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	out, err := Filter(mpd, WithMinResolution(0, 720))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	if len(m.Periods[0].AdaptationSets[0].Representations) != 1 {
+		t.Errorf("expected 1 representation after minHeight filter, got %d", len(m.Periods[0].AdaptationSets[0].Representations))
+	}
+}
+
+func TestFilter_DASH_ExactHeightOnly(t *testing.T) {
+	// exactWidth matches but exactHeight does not.
+	mpd := `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static">
+  <Period>
+    <AdaptationSet contentType="video" mimeType="video/mp4">
+      <Representation id="v1" bandwidth="3000000" width="1280" height="360" codecs="avc1.640028"/>
+      <Representation id="v2" bandwidth="1000000" width="1280" height="720" codecs="avc1.64001F"/>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	out, err := Filter(mpd, WithExactResolution(1280, 720))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	if len(m.Periods[0].AdaptationSets[0].Representations) != 1 {
+		t.Errorf("expected 1 representation after exactHeight filter, got %d", len(m.Periods[0].AdaptationSets[0].Representations))
+	}
+}
+
+func TestFilter_DASH_MimeInheritedFromAdaptationSet(t *testing.T) {
+	// Representation has no MimeType — inherits from AdaptationSet.
+	// WithMimeType("audio/mp4") should keep only audio reps.
+	mpd := `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static">
+  <Period>
+    <AdaptationSet contentType="video" mimeType="video/mp4">
+      <Representation id="v1" bandwidth="3000000" codecs="avc1.640028"/>
+    </AdaptationSet>
+    <AdaptationSet contentType="audio" mimeType="audio/mp4">
+      <Representation id="a1" bandwidth="128000"/>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	out, err := Filter(mpd, WithMimeType("audio/mp4"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	if len(m.Periods[0].AdaptationSets) != 1 {
+		t.Errorf("expected 1 AdaptationSet after mime filter, got %d", len(m.Periods[0].AdaptationSets))
+	}
+	if m.Periods[0].AdaptationSets[0].ContentType != "audio" {
+		t.Errorf("expected audio AdaptationSet to survive")
+	}
+}
