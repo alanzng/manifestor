@@ -501,3 +501,84 @@ func TestFilter_WithInjectAdaptationSet(t *testing.T) {
 		t.Errorf("injected BaseURL = %q", injected.Representations[0].BaseURL)
 	}
 }
+
+// ---- isTextAdaptationSet coverage ----
+
+func TestFilter_TextAdaptationSet_ExcludedFromCodecFilter(t *testing.T) {
+	// A text/subtitle AdaptationSet should survive a codec filter that would
+	// otherwise reject its representations (codec filter skips text sets).
+	mpd := `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static">
+  <Period>
+    <AdaptationSet contentType="video" mimeType="video/mp4">
+      <Representation id="v1" bandwidth="3000000" codecs="avc1.640028"/>
+    </AdaptationSet>
+    <AdaptationSet contentType="text" mimeType="text/vtt">
+      <Representation id="t1" bandwidth="1000" codecs="wvtt"/>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	out, err := Filter(mpd, WithCodec("h264"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	if len(m.Periods[0].AdaptationSets) != 2 {
+		t.Errorf("expected 2 AdaptationSets (video + text), got %d", len(m.Periods[0].AdaptationSets))
+	}
+}
+
+func TestFilter_TextAdaptationSet_ByMimeType(t *testing.T) {
+	// isTextAdaptationSet via MimeType prefix "text/" (no ContentType set).
+	mpd := `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static">
+  <Period>
+    <AdaptationSet mimeType="video/mp4">
+      <Representation id="v1" bandwidth="3000000" codecs="avc1.640028"/>
+    </AdaptationSet>
+    <AdaptationSet mimeType="text/vtt">
+      <Representation id="t1" bandwidth="1000" codecs="wvtt"/>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	out, err := Filter(mpd, WithCodec("h264"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	if len(m.Periods[0].AdaptationSets) != 2 {
+		t.Errorf("expected 2 AdaptationSets (video + text/vtt), got %d", len(m.Periods[0].AdaptationSets))
+	}
+}
+
+func TestFilter_RepresentationInheritsMimeType(t *testing.T) {
+	// Representation has no MimeType; it should inherit from AdaptationSet.
+	// WithMimeType("video/mp4") should keep the video rep and drop the audio set.
+	mpd := `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static">
+  <Period>
+    <AdaptationSet contentType="video" mimeType="video/mp4">
+      <Representation id="v1" bandwidth="3000000" codecs="avc1.640028"/>
+    </AdaptationSet>
+    <AdaptationSet contentType="audio" mimeType="audio/mp4">
+      <Representation id="a1" bandwidth="128000"/>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	out, err := Filter(mpd, WithMimeType("video/mp4"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m, _ := Parse(out)
+	if len(m.Periods[0].AdaptationSets) != 1 {
+		t.Errorf("expected 1 AdaptationSet after mime filter, got %d", len(m.Periods[0].AdaptationSets))
+	}
+}
+
+func TestFilter_ParseFrameRate_DenominatorZero(t *testing.T) {
+	// parseFrameRate("30/0") should return 0 (den==0 guard).
+	fps := parseFrameRate("30/0")
+	if fps != 0 {
+		t.Errorf("parseFrameRate(\"30/0\") = %f, want 0", fps)
+	}
+}

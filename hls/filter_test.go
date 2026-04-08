@@ -624,3 +624,42 @@ func TestFilter_WithMimeType_NoOp(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+// ---- variantPasses / iframePasses height-only branch coverage ----
+
+func TestVariantPasses_MaxHeightOnly(t *testing.T) {
+	// Width is within limit but height exceeds it — exercises maxHeight return false
+	// without being short-circuited by maxWidth.
+	v := &Variant{Width: 1280, Height: 1080, Bandwidth: 3000000}
+	cfg := &filterConfig{maxWidth: 9999, maxHeight: 720}
+	if variantPasses(v, cfg) {
+		t.Error("expected variant to be filtered by maxHeight")
+	}
+}
+
+func TestVariantPasses_MinHeightOnly(t *testing.T) {
+	// Width is within limit but height is below minimum — exercises minHeight return false.
+	v := &Variant{Width: 9999, Height: 360, Bandwidth: 3000000}
+	cfg := &filterConfig{minWidth: 0, minHeight: 720}
+	if variantPasses(v, cfg) {
+		t.Error("expected variant to be filtered by minHeight")
+	}
+}
+
+func TestVariantPasses_ExactHeightOnly(t *testing.T) {
+	// exactWidth matches but exactHeight does not — exercises exactHeight return false.
+	v := &Variant{Width: 1280, Height: 360, Bandwidth: 3000000}
+	cfg := &filterConfig{exactWidth: 1280, exactHeight: 720}
+	if variantPasses(v, cfg) {
+		t.Error("expected variant to be filtered by exactHeight mismatch")
+	}
+}
+
+func TestIFramePasses_MaxHeightOnly(t *testing.T) {
+	// Width is within limit but height exceeds it — exercises maxHeight return false on iframes.
+	f := &IFrameStream{Width: 1280, Height: 1080, Bandwidth: 3000000}
+	cfg := &filterConfig{maxWidth: 9999, maxHeight: 720}
+	if iframePasses(f, cfg) {
+		t.Error("expected iframe to be filtered by maxHeight")
+	}
+}

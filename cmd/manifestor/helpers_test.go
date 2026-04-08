@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -536,5 +538,43 @@ func TestBuildManifest_DASHWithProfile(t *testing.T) {
 	}
 	if !strings.Contains(buf.String(), "<MPD") {
 		t.Errorf("expected <MPD in output")
+	}
+}
+
+func TestBuildManifest_WithToken(t *testing.T) {
+	spec := `{"format":"hls","variants":[{"uri":"https://origin.example.com/v.m3u8","bandwidth":3000000}]}`
+	f, _ := os.CreateTemp(t.TempDir(), "*.json")
+	_, _ = f.WriteString(spec)
+	_ = f.Close()
+	var buf bytes.Buffer
+	err := buildManifest([]string{"--format", "hls", "--variants", f.Name(), "--token", "mytoken"}, &buf)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(buf.String(), "mytoken") {
+		t.Errorf("expected token in output, got:\n%s", buf.String())
+	}
+}
+
+func TestFilterManifest_FromURL(t *testing.T) {
+	// Serve a small HLS fixture via httptest and filter via --url.
+	fixture := testFixture("hls", "bento4_mixed_codecs.m3u8")
+	content, err := os.ReadFile(fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
+		w.Write(content)
+	}))
+	defer ts.Close()
+
+	var buf bytes.Buffer
+	err = filterManifest([]string{"--url", ts.URL + "/test.m3u8", "--codec", "h264"}, &buf)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(buf.String(), "avc1") {
+		t.Errorf("expected avc1 codec in output, got:\n%s", buf.String())
 	}
 }
