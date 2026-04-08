@@ -663,3 +663,27 @@ func TestIFramePasses_MaxHeightOnly(t *testing.T) {
 		t.Error("expected iframe to be filtered by maxHeight")
 	}
 }
+
+func TestIFramePasses_MinHeightOnly(t *testing.T) {
+	f := &IFrameStream{Width: 9999, Height: 360, Bandwidth: 3000000}
+	cfg := &filterConfig{minWidth: 0, minHeight: 720}
+	if iframePasses(f, cfg) {
+		t.Error("expected iframe to be filtered by minHeight")
+	}
+}
+
+func TestIFramePasses_ExactHeightMismatch(t *testing.T) {
+	f := &IFrameStream{Width: 1280, Height: 360, Bandwidth: 3000000}
+	cfg := &filterConfig{exactWidth: 1280, exactHeight: 720}
+	if iframePasses(f, cfg) {
+		t.Error("expected iframe to be filtered by exactHeight mismatch")
+	}
+}
+
+func TestIFramePasses_ExactWidthMismatch(t *testing.T) {
+	f := &IFrameStream{Width: 1920, Height: 720, Bandwidth: 3000000}
+	cfg := &filterConfig{exactWidth: 1280, exactHeight: 720}
+	if iframePasses(f, cfg) {
+		t.Error("expected iframe to be filtered by exactWidth mismatch")
+	}
+}
