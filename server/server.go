@@ -138,6 +138,27 @@ func (s *Server) handleFilter(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if raw := q.Get("inject_audio"); raw != "" {
+		var tracks []injectTrackJSON
+		if err := json.Unmarshal([]byte(raw), &tracks); err != nil {
+			http.Error(w, "invalid inject_audio: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		for _, t := range tracks {
+			opts = append(opts, injectTrackToOptions(t, false)...)
+		}
+	}
+	if raw := q.Get("inject_subtitle"); raw != "" {
+		var tracks []injectTrackJSON
+		if err := json.Unmarshal([]byte(raw), &tracks); err != nil {
+			http.Error(w, "invalid inject_subtitle: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		for _, t := range tracks {
+			opts = append(opts, injectTrackToOptions(t, true)...)
+		}
+	}
+
 	result, err := manifest.FilterFromURL(upstreamURL, opts...)
 	if err != nil {
 		if errors.Is(err, manifest.ErrNoVariantsRemain) {
@@ -428,8 +449,93 @@ type segmentTemplateJSON struct {
 }
 
 type segmentBaseJSON struct {
-	IndexRange     string `json:"index_range"`
-	Initialization string `json:"initialization"`
+	IndexRange          string `json:"index_range"`
+	Initialization      string `json:"initialization"`
+	InitializationRange string `json:"initialization_range"`
+}
+
+// injectTrackJSON is the unified schema for inject_audio / inject_subtitle query params.
+// DASH fields: mime_type, content_type, lang, name, representations.
+// HLS fields:  group_id, language, name, uri, default, auto_select, forced.
+type injectTrackJSON struct {
+	// Shared
+	Lang string `json:"lang"`
+	Name string `json:"name"`
+	// DASH
+	MimeType        string               `json:"mime_type"`
+	ContentType     string               `json:"content_type"`
+	Representations []representationJSON `json:"representations"`
+	// HLS
+	GroupID    string `json:"group_id"`
+	Language   string `json:"language"` // alias for Lang in HLS context
+	URI        string `json:"uri"`
+	Default    bool   `json:"default"`
+	AutoSelect bool   `json:"auto_select"`
+	Forced     bool   `json:"forced"`
+}
+
+// injectTrackToOptions converts an injectTrackJSON to the appropriate manifest options.
+// isSubtitle controls whether HLS subtitle or audio track options are produced.
+func injectTrackToOptions(t injectTrackJSON, isSubtitle bool) []manifest.Option {
+	var opts []manifest.Option
+
+	lang := t.Lang
+	if lang == "" {
+		lang = t.Language
+	}
+
+	// DASH: inject as AdaptationSet when mime_type or representations are set.
+	if t.MimeType != "" || len(t.Representations) > 0 {
+		asp := dash.AdaptationSetParams{
+			MimeType:    t.MimeType,
+			ContentType: t.ContentType,
+			Lang:        lang,
+			Name:        t.Name,
+		}
+		if isSubtitle && asp.ContentType == "" {
+			asp.ContentType = "text"
+		}
+		for _, r := range t.Representations {
+			rp := dash.RepresentationParams{
+				ID:        r.ID,
+				Bandwidth: r.Bandwidth,
+				Codecs:    r.Codecs,
+				Width:     r.Width,
+				Height:    r.Height,
+				FrameRate: r.FrameRate,
+				MimeType:  r.MimeType,
+				BaseURL:   r.BaseURL,
+			}
+			asp.Representations = append(asp.Representations, rp)
+		}
+		opts = append(opts, manifest.WithDASHInjectAdaptationSet(asp))
+	}
+
+	// HLS: inject when uri or group_id is set.
+	if t.URI != "" || t.GroupID != "" {
+		if isSubtitle {
+			opts = append(opts, manifest.WithHLSInjectSubtitle(hls.SubtitleTrackParams{
+				GroupID:  t.GroupID,
+				Name:     t.Name,
+				Language: lang,
+				URI:      t.URI,
+				Default:  t.Default,
+				Forced:   t.Forced,
+			}))
+		} else {
+			opts = append(opts, manifest.WithHLSInjectAudioTrack(hls.AudioTrackParams{
+				GroupID:    t.GroupID,
+				Name:       t.Name,
+				Language:   lang,
+				URI:        t.URI,
+				Default:    t.Default,
+				AutoSelect: t.AutoSelect,
+				Forced:     t.Forced,
+			}))
+		}
+	}
+
+	return opts
 }
 
 type representationJSON struct {
@@ -441,4 +547,5 @@ type representationJSON struct {
 	FrameRate    string `json:"frame_rate"`
 	MimeType     string `json:"mime_type"`
 	StartWithSAP int    `json:"start_with_sap"`
+	BaseURL      string `json:"base_url"`
 }

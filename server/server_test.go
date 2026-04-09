@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -693,6 +694,157 @@ func TestHandleBuild_PostBuildWithToken(t *testing.T) {
 	b, _ := io.ReadAll(resp.Body)
 	if !strings.Contains(string(b), "mytoken") {
 		t.Errorf("expected token in output, got:\n%s", b)
+	}
+}
+
+const sampleDASH = `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static" mediaPresentationDuration="PT30S" minBufferTime="PT2S">
+  <Period>
+    <AdaptationSet mimeType="video/mp4">
+      <Representation id="v1" bandwidth="1000000" codecs="avc1.64001F" width="1280" height="720">
+        <BaseURL>video.mp4</BaseURL>
+      </Representation>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+
+func mockDASHUpstream(content string) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/dash+xml")
+		_, _ = w.Write([]byte(content))
+	}))
+}
+
+func TestHandleFilter_InjectAudio_InvalidJSON(t *testing.T) {
+	upstream := mockDASHUpstream(sampleDASH)
+	defer upstream.Close()
+	srv := newTestServer()
+	defer srv.Close()
+
+	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/test.mpd&inject_audio=notjson")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400 for invalid inject_audio, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleFilter_InjectSubtitle_InvalidJSON(t *testing.T) {
+	upstream := mockDASHUpstream(sampleDASH)
+	defer upstream.Close()
+	srv := newTestServer()
+	defer srv.Close()
+
+	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/test.mpd&inject_subtitle=notjson")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400 for invalid inject_subtitle, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleFilter_InjectAudio_DASH(t *testing.T) {
+	upstream := mockDASHUpstream(sampleDASH)
+	defer upstream.Close()
+	srv := newTestServer()
+	defer srv.Close()
+
+	audioJSON := `[{"lang":"vi","name":"Vietnamese","mime_type":"audio/mp4","representations":[{"id":"audio-vi","bandwidth":128000,"codecs":"mp4a.40.2","base_url":"https://cdn.example.com/audio-vi.mp4"}]}]`
+	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/test.mpd&inject_audio="+audioJSON)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, b)
+	}
+	b, _ := io.ReadAll(resp.Body)
+	body := string(b)
+	if !strings.Contains(body, "audio-vi") {
+		t.Errorf("injected audio rep id not found in output:\n%s", body)
+	}
+	if !strings.Contains(body, `lang="vi"`) {
+		t.Errorf("injected audio lang not found in output:\n%s", body)
+	}
+}
+
+func TestHandleFilter_InjectSubtitle_DASH(t *testing.T) {
+	upstream := mockDASHUpstream(sampleDASH)
+	defer upstream.Close()
+	srv := newTestServer()
+	defer srv.Close()
+
+	subJSON := url.QueryEscape(`[{"lang":"vi","name":"VietnameseSub","mime_type":"text/vtt","content_type":"text","representations":[{"id":"sub-vi","bandwidth":16,"base_url":"https://cdn.example.com/sub-vi.vtt"}]}]`)
+	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/test.mpd&inject_subtitle="+subJSON)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, b)
+	}
+	b, _ := io.ReadAll(resp.Body)
+	body := string(b)
+	if !strings.Contains(body, "sub-vi") {
+		t.Errorf("injected subtitle rep id not found in output:\n%s", body)
+	}
+	if !strings.Contains(body, "text/vtt") {
+		t.Errorf("injected subtitle mime type not found in output:\n%s", body)
+	}
+}
+
+func TestHandleFilter_InjectAudio_HLS(t *testing.T) {
+	upstream := mockUpstream(sampleHLS)
+	defer upstream.Close()
+	srv := newTestServer()
+	defer srv.Close()
+
+	audioJSON := `[{"group_id":"audio","lang":"vi","name":"Vietnamese","uri":"https://cdn.example.com/audio-vi.m3u8","default":true,"auto_select":true}]`
+	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/test.m3u8&inject_audio="+audioJSON)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, b)
+	}
+	b, _ := io.ReadAll(resp.Body)
+	body := string(b)
+	if !strings.Contains(body, "audio-vi.m3u8") {
+		t.Errorf("injected HLS audio URI not found in output:\n%s", body)
+	}
+	if !strings.Contains(body, `LANGUAGE="vi"`) {
+		t.Errorf("injected HLS audio language not found in output:\n%s", body)
+	}
+}
+
+func TestHandleFilter_InjectSubtitle_HLS(t *testing.T) {
+	upstream := mockUpstream(sampleHLS)
+	defer upstream.Close()
+	srv := newTestServer()
+	defer srv.Close()
+
+	subJSON := `[{"group_id":"subs","lang":"vi","name":"Vietnamese","uri":"https://cdn.example.com/sub-vi.m3u8","forced":false}]`
+	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/test.m3u8&inject_subtitle="+subJSON)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, b)
+	}
+	b, _ := io.ReadAll(resp.Body)
+	body := string(b)
+	if !strings.Contains(body, "sub-vi.m3u8") {
+		t.Errorf("injected HLS subtitle URI not found in output:\n%s", body)
 	}
 }
 
