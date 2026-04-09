@@ -3,9 +3,9 @@ package server_test
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"io"
-	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"strings"
