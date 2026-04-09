@@ -5,13 +5,15 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	manifestor "github.com/alanzng/manifestor"
 )
 
 // ---- Codec filter ----
 
 func TestFilter_Codec_H264(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
-	out, err := Filter(content, WithCodec("h264"))
+	out, err := Filter(content, WithCodec(manifestor.H264))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -23,7 +25,7 @@ func TestFilter_Codec_H264(t *testing.T) {
 				continue
 			}
 			for _, r := range as.Representations {
-				if r.Codecs != "" && !matchesCodec(r.Codecs, "h264") {
+				if r.Codecs != "" && !manifestor.H264.MatchesCodec(r.Codecs) {
 					t.Errorf("non-h264 video rep survived: %s (%s)", r.ID, r.Codecs)
 				}
 			}
@@ -33,7 +35,7 @@ func TestFilter_Codec_H264(t *testing.T) {
 
 func TestFilter_Codec_H265(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
-	out, err := Filter(content, WithCodec("h265"))
+	out, err := Filter(content, WithCodec(manifestor.H265))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -54,7 +56,7 @@ func TestFilter_Codec_NoMatch_ReturnsErr(t *testing.T) {
     </AdaptationSet>
   </Period>
 </MPD>`
-	_, err := Filter(videoOnly, WithCodec("av1"))
+	_, err := Filter(videoOnly, WithCodec(manifestor.AV1))
 	if !errors.Is(err, ErrNoVariantsRemain) {
 		t.Errorf("got %v, want ErrNoVariantsRemain", err)
 	}
@@ -63,7 +65,7 @@ func TestFilter_Codec_NoMatch_ReturnsErr(t *testing.T) {
 func TestFilter_Codec_CaseInsensitive(t *testing.T) {
 	// bento4 fixture has "avc1.64001F" with uppercase — must still match h264.
 	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
-	_, err := Filter(content, WithCodec("h264"))
+	_, err := Filter(content, WithCodec(manifestor.H264))
 	if err != nil {
 		t.Errorf("unexpected error: %v (uppercase codec should match h264)", err)
 	}
@@ -73,7 +75,7 @@ func TestFilter_Codec_CaseInsensitive(t *testing.T) {
 
 func TestFilter_MaxResolution(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/isoff_ondemand.mpd")
-	out, err := Filter(content, WithMaxResolution(1280, 720))
+	out, err := Filter(content, WithMaxResolution(manifestor.Res720p))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -87,7 +89,7 @@ func TestFilter_MaxResolution(t *testing.T) {
 
 func TestFilter_MinResolution(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/isoff_ondemand.mpd")
-	out, err := Filter(content, WithMinResolution(1280, 720))
+	out, err := Filter(content, WithMinResolution(manifestor.Res720p))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -101,7 +103,7 @@ func TestFilter_MinResolution(t *testing.T) {
 
 func TestFilter_ExactResolution(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/isoff_ondemand.mpd")
-	out, err := Filter(content, WithExactResolution(1280, 720))
+	out, err := Filter(content, WithExactResolution(manifestor.Res720p))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -193,7 +195,7 @@ func TestFilter_ParseFrameRate_Fraction(t *testing.T) {
 
 func TestFilter_MimeType_VideoOnly(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/isoff_ondemand.mpd")
-	out, err := Filter(content, WithMimeType("video/mp4"))
+	out, err := Filter(content, WithMimeType(manifestor.MimeVideoMP4))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -281,7 +283,7 @@ func TestFilter_CustomTransformer(t *testing.T) {
 func TestFilter_Composed(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
 	// h264 AND exact 1280x720 — should leave only video-avc1-2.
-	out, err := Filter(content, WithCodec("h264"), WithExactResolution(1280, 720))
+	out, err := Filter(content, WithCodec(manifestor.H264), WithExactResolution(manifestor.Res720p))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -331,7 +333,7 @@ func TestFilter_Reparseable_Live(t *testing.T) {
 
 func TestFilter_Reparseable_Bento4Mixed(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
-	out, err := Filter(content, WithCodec("h265"))
+	out, err := Filter(content, WithCodec(manifestor.H265))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -362,7 +364,7 @@ func TestMatchesCodec(t *testing.T) {
 		{"", "h264", false},
 	}
 	for _, tt := range tests {
-		got := matchesCodec(tt.field, tt.want)
+		got := manifestor.Codec(tt.want).MatchesCodec(tt.field)
 		if got != tt.match {
 			t.Errorf("matchesCodec(%q, %q) = %v, want %v", tt.field, tt.want, got, tt.match)
 		}
@@ -375,7 +377,7 @@ func BenchmarkFilter(b *testing.B) {
 	content := mustReadFixtureB(b, "../testdata/dash/bento4_mixed_codecs.mpd")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = Filter(content, WithCodec("h264"), WithMaxBandwidth(5000000))
+		_, _ = Filter(content, WithCodec(manifestor.H264), WithMaxBandwidth(5000000))
 	}
 }
 
@@ -518,7 +520,7 @@ func TestFilter_TextAdaptationSet_ExcludedFromCodecFilter(t *testing.T) {
     </AdaptationSet>
   </Period>
 </MPD>`
-	out, err := Filter(mpd, WithCodec("h264"))
+	out, err := Filter(mpd, WithCodec(manifestor.H264))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -541,7 +543,7 @@ func TestFilter_TextAdaptationSet_ByMimeType(t *testing.T) {
     </AdaptationSet>
   </Period>
 </MPD>`
-	out, err := Filter(mpd, WithCodec("h264"))
+	out, err := Filter(mpd, WithCodec(manifestor.H264))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -553,7 +555,7 @@ func TestFilter_TextAdaptationSet_ByMimeType(t *testing.T) {
 
 func TestFilter_RepresentationInheritsMimeType(t *testing.T) {
 	// Representation has no MimeType; it should inherit from AdaptationSet.
-	// WithMimeType("video/mp4") should keep the video rep and drop the audio set.
+	// WithMimeType(manifestor.MimeVideoMP4) should keep the video rep and drop the audio set.
 	mpd := `<?xml version="1.0" encoding="UTF-8"?>
 <MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static">
   <Period>
@@ -565,7 +567,7 @@ func TestFilter_RepresentationInheritsMimeType(t *testing.T) {
     </AdaptationSet>
   </Period>
 </MPD>`
-	out, err := Filter(mpd, WithMimeType("video/mp4"))
+	out, err := Filter(mpd, WithMimeType(manifestor.MimeVideoMP4))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -596,7 +598,7 @@ func TestFilter_DASH_MaxHeightOnly(t *testing.T) {
     </AdaptationSet>
   </Period>
 </MPD>`
-	out, err := Filter(mpd, WithMaxResolution(9999, 720))
+	out, err := Filter(mpd, WithMaxResolution(manifestor.Resolution{Width: 9999, Height: 720}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -617,7 +619,7 @@ func TestFilter_DASH_MinHeightOnly(t *testing.T) {
     </AdaptationSet>
   </Period>
 </MPD>`
-	out, err := Filter(mpd, WithMinResolution(0, 720))
+	out, err := Filter(mpd, WithMinResolution(manifestor.Resolution{Width: 0, Height: 720}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -638,7 +640,7 @@ func TestFilter_DASH_ExactHeightOnly(t *testing.T) {
     </AdaptationSet>
   </Period>
 </MPD>`
-	out, err := Filter(mpd, WithExactResolution(1280, 720))
+	out, err := Filter(mpd, WithExactResolution(manifestor.Res720p))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -650,7 +652,7 @@ func TestFilter_DASH_ExactHeightOnly(t *testing.T) {
 
 func TestFilter_DASH_MimeInheritedFromAdaptationSet(t *testing.T) {
 	// Representation has no MimeType — inherits from AdaptationSet.
-	// WithMimeType("audio/mp4") should keep only audio reps.
+	// WithMimeType(manifestor.MimeAudioMP4) should keep only audio reps.
 	mpd := `<?xml version="1.0" encoding="UTF-8"?>
 <MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static">
   <Period>
@@ -662,7 +664,7 @@ func TestFilter_DASH_MimeInheritedFromAdaptationSet(t *testing.T) {
     </AdaptationSet>
   </Period>
 </MPD>`
-	out, err := Filter(mpd, WithMimeType("audio/mp4"))
+	out, err := Filter(mpd, WithMimeType(manifestor.MimeAudioMP4))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

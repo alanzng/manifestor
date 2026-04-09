@@ -125,7 +125,7 @@ func isTextAdaptationSet(as *AdaptationSet) bool {
 func representationPasses(r *Representation, as *AdaptationSet, cfg *filterConfig) bool {
 	// Codec filter applies to video only; audio/text sets are unaffected.
 	if cfg.codec != "" && !isAudioAdaptationSet(as) && !isTextAdaptationSet(as) {
-		if !matchesCodec(r.Codecs, cfg.codec) {
+		if !cfg.codec.MatchesCodec(r.Codecs) {
 			return false
 		}
 	}
@@ -135,7 +135,7 @@ func representationPasses(r *Representation, as *AdaptationSet, cfg *filterConfi
 	if mime == "" {
 		mime = as.MimeType
 	}
-	if cfg.mimeType != "" && !strings.EqualFold(mime, cfg.mimeType) {
+	if cfg.mimeType != "" && !strings.EqualFold(mime, string(cfg.mimeType)) {
 		return false
 	}
 
@@ -214,35 +214,6 @@ func applyTransformers(r *Representation, cfg *filterConfig) {
 	if cfg.customTransform != nil {
 		cfg.customTransform(r)
 	}
-}
-
-// matchesCodec reports whether the codecs string contains a codec from the
-// requested family. Matching is case-insensitive.
-//
-// Families: "h264" (avc1/avc3), "h265" (hvc1/hev1), "vp9" (vp09), "av1" (av01).
-func matchesCodec(codecsField, want string) bool {
-	for _, c := range strings.Split(codecsField, ",") {
-		c = strings.ToLower(strings.TrimSpace(c))
-		switch want {
-		case "h264":
-			if strings.HasPrefix(c, "avc1.") || strings.HasPrefix(c, "avc3.") {
-				return true
-			}
-		case "h265":
-			if strings.HasPrefix(c, "hvc1.") || strings.HasPrefix(c, "hev1.") {
-				return true
-			}
-		case "vp9":
-			if strings.HasPrefix(c, "vp09.") || c == "vp9" {
-				return true
-			}
-		case "av1":
-			if strings.HasPrefix(c, "av01.") {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 // parseFrameRate parses a DASH frameRate attribute ("30", "30000/1001", etc.)

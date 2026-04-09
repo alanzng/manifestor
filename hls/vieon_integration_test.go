@@ -9,13 +9,15 @@ package hls
 import (
 	"strings"
 	"testing"
+
+	manifestor "github.com/alanzng/manifestor"
 )
 
 const vieonHLSCDNBase = "https://vod-bp.vieon.vn/56714cc3c2fc1068f083ae040a56621d/1775572699000/ott-vod-202603/vod/2026/03/12/bffa9046-2fe5-4b01-888e-ed9d91ce035e/"
 
 func TestVieon_HLS_Filter_H265Only(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/vieon_vod.m3u8")
-	out, err := Filter(content, WithCodec("h265"))
+	out, err := Filter(content, WithCodec(manifestor.H265))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -29,7 +31,7 @@ func TestVieon_HLS_Filter_H265Only(t *testing.T) {
 
 func TestVieon_HLS_Filter_MaxResolution720p(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/vieon_vod.m3u8")
-	out, err := Filter(content, WithCodec("h265"), WithMaxResolution(1280, 720))
+	out, err := Filter(content, WithCodec(manifestor.H265), WithMaxResolution(manifestor.Res720p))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -53,8 +55,8 @@ func TestVieon_HLS_Filter_MaxResolution720p(t *testing.T) {
 func TestVieon_HLS_Filter_AbsoluteVariantURIs(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/vieon_vod.m3u8")
 	out, err := Filter(content,
-		WithCodec("h265"),
-		WithMaxResolution(1280, 720),
+		WithCodec(manifestor.H265),
+		WithMaxResolution(manifestor.Res720p),
 		WithAbsoluteURIs(vieonHLSCDNBase),
 	)
 	if err != nil {
@@ -74,8 +76,8 @@ func TestVieon_HLS_Filter_AbsoluteVariantURIs(t *testing.T) {
 func TestVieon_HLS_Filter_VariantURIContent(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/vieon_vod.m3u8")
 	out, err := Filter(content,
-		WithCodec("h265"),
-		WithMaxResolution(1280, 720),
+		WithCodec(manifestor.H265),
+		WithMaxResolution(manifestor.Res720p),
 		WithAbsoluteURIs(vieonHLSCDNBase),
 	)
 	if err != nil {
@@ -98,8 +100,8 @@ func TestVieon_HLS_Filter_VariantURIContent(t *testing.T) {
 func TestVieon_HLS_IFrameURIsRewritten(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/vieon_vod.m3u8")
 	out, err := Filter(content,
-		WithCodec("h265"),
-		WithMaxResolution(1280, 720),
+		WithCodec(manifestor.H265),
+		WithMaxResolution(manifestor.Res720p),
 		WithAbsoluteURIs(vieonHLSCDNBase),
 	)
 	if err != nil {
@@ -120,8 +122,8 @@ func TestVieon_HLS_IFrameURIsRewritten(t *testing.T) {
 func TestVieon_HLS_AudioTrackURIRewritten(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/vieon_vod.m3u8")
 	out, err := Filter(content,
-		WithCodec("h265"),
-		WithMaxResolution(1280, 720),
+		WithCodec(manifestor.H265),
+		WithMaxResolution(manifestor.Res720p),
 		WithAbsoluteURIs(vieonHLSCDNBase),
 	)
 	if err != nil {
@@ -142,8 +144,8 @@ func TestVieon_HLS_AudioTrackURIRewritten(t *testing.T) {
 func TestVieon_HLS_WithVariantSubtitleGroup(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/vieon_vod.m3u8")
 	out, err := Filter(content,
-		WithCodec("h265"),
-		WithMaxResolution(1280, 720),
+		WithCodec(manifestor.H265),
+		WithMaxResolution(manifestor.Res720p),
 		WithVariantSubtitleGroup("subs"),
 	)
 	if err != nil {
@@ -165,8 +167,8 @@ func TestVieon_HLS_InjectDubbedAudio(t *testing.T) {
 	const dubbedCDNBase = "https://vod-bp.vieon.vn/dc07150ba0e3ee475dc7e18731b13906/1775572699000/ott-vod-202603/vod/2026/03/24/5f5bbfae-3d8a-4654-8b69-de5dbe22e518/"
 
 	out, err := Filter(content,
-		WithCodec("h265"),
-		WithMaxResolution(1280, 720),
+		WithCodec(manifestor.H265),
+		WithMaxResolution(manifestor.Res720p),
 		WithAbsoluteURIs(vieonHLSCDNBase),
 		WithInjectAudioTrack(AudioTrackParams{
 			GroupID:  "audio/mp4a",
@@ -201,8 +203,8 @@ func TestVieon_HLS_InjectDubbedAudio(t *testing.T) {
 func TestVieon_HLS_InjectSubtitle(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/vieon_vod.m3u8")
 	out, err := Filter(content,
-		WithCodec("h265"),
-		WithMaxResolution(1280, 720),
+		WithCodec(manifestor.H265),
+		WithMaxResolution(manifestor.Res720p),
 		WithAbsoluteURIs(vieonHLSCDNBase),
 		WithVariantSubtitleGroup("subs"),
 		WithInjectSubtitle(SubtitleTrackParams{
@@ -241,8 +243,8 @@ func TestVieon_HLS_FullPipeline(t *testing.T) {
 	const dubbedCDNBase = "https://vod-bp.vieon.vn/dc07150ba0e3ee475dc7e18731b13906/1775572699000/ott-vod-202603/vod/2026/03/24/5f5bbfae-3d8a-4654-8b69-de5dbe22e518/"
 
 	out, err := Filter(content,
-		WithCodec("h265"),
-		WithMaxResolution(1280, 720),
+		WithCodec(manifestor.H265),
+		WithMaxResolution(manifestor.Res720p),
 		WithAbsoluteURIs(vieonHLSCDNBase),
 		WithVariantSubtitleGroup("subs"),
 		WithInjectSubtitle(SubtitleTrackParams{

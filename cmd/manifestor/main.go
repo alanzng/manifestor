@@ -15,8 +15,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"strings"
+
+	manifestor "github.com/alanzng/manifestor"
 
 	"github.com/alanzng/manifestor/dash"
 	"github.com/alanzng/manifestor/hls"
@@ -95,21 +96,25 @@ func filterManifest(args []string, stdout io.Writer) error {
 	// Build options.
 	var opts []manifest.Option
 	if *codec != "" {
-		opts = append(opts, manifest.WithCodec(*codec))
+		c, err := manifestor.ParseCodec(*codec)
+		if err != nil {
+			return err
+		}
+		opts = append(opts, manifest.WithCodec(c))
 	}
 	if *maxRes != "" {
-		w, h, err := parseResolution(*maxRes)
+		r, err := manifestor.ParseResolution(*maxRes)
 		if err != nil {
 			return fmt.Errorf("invalid --max-res %q: %w", *maxRes, err)
 		}
-		opts = append(opts, manifest.WithMaxResolution(w, h))
+		opts = append(opts, manifest.WithMaxResolution(r))
 	}
 	if *minRes != "" {
-		w, h, err := parseResolution(*minRes)
+		r, err := manifestor.ParseResolution(*minRes)
 		if err != nil {
 			return fmt.Errorf("invalid --min-res %q: %w", *minRes, err)
 		}
-		opts = append(opts, manifest.WithMinResolution(w, h))
+		opts = append(opts, manifest.WithMinResolution(r))
 	}
 	if *maxBw != 0 {
 		opts = append(opts, manifest.WithMaxBandwidth(*maxBw))
@@ -368,23 +373,6 @@ func buildDASH(req *buildRequest) (string, error) {
 	}
 
 	return b.Build()
-}
-
-// parseResolution parses "WxH" into width and height.
-func parseResolution(s string) (w, h int, err error) {
-	parts := strings.SplitN(s, "x", 2)
-	if len(parts) != 2 {
-		return 0, 0, fmt.Errorf("expected WxH format")
-	}
-	w, err = strconv.Atoi(parts[0])
-	if err != nil {
-		return 0, 0, fmt.Errorf("invalid width: %v", err)
-	}
-	h, err = strconv.Atoi(parts[1])
-	if err != nil {
-		return 0, 0, fmt.Errorf("invalid height: %v", err)
-	}
-	return w, h, nil
 }
 
 // writeOutput writes s to the given file path, or stdout if path is empty.

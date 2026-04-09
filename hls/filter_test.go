@@ -5,13 +5,15 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	manifestor "github.com/alanzng/manifestor"
 )
 
 // ---- Codec filter (F-01) ----
 
 func TestFilter_Codec_H264(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
-	out, err := Filter(content, WithCodec("h264"))
+	out, err := Filter(content, WithCodec(manifestor.H264))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -20,7 +22,7 @@ func TestFilter_Codec_H264(t *testing.T) {
 		t.Errorf("variants = %d, want 4", len(p.Variants))
 	}
 	for _, v := range p.Variants {
-		if !matchesCodec(v.Codecs, "h264") {
+		if !manifestor.H264.MatchesCodec(v.Codecs) {
 			t.Errorf("variant %q has non-h264 codec %q", v.URI, v.Codecs)
 		}
 	}
@@ -28,7 +30,7 @@ func TestFilter_Codec_H264(t *testing.T) {
 
 func TestFilter_Codec_H265(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
-	out, err := Filter(content, WithCodec("h265"))
+	out, err := Filter(content, WithCodec(manifestor.H265))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -40,7 +42,7 @@ func TestFilter_Codec_H265(t *testing.T) {
 
 func TestFilter_Codec_NoMatch_ReturnsErrNoVariantsRemain(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
-	_, err := Filter(content, WithCodec("vp9"))
+	_, err := Filter(content, WithCodec(manifestor.VP9))
 	if !errors.Is(err, ErrNoVariantsRemain) {
 		t.Errorf("got %v, want ErrNoVariantsRemain", err)
 	}
@@ -49,7 +51,7 @@ func TestFilter_Codec_NoMatch_ReturnsErrNoVariantsRemain(t *testing.T) {
 func TestFilter_Codec_CaseInsensitiveCodecField(t *testing.T) {
 	// bento4_mixed_codecs has uppercase codec like "avc1.64001F" — must still match h264.
 	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
-	out, err := Filter(content, WithCodec("h264"))
+	out, err := Filter(content, WithCodec(manifestor.H264))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -64,7 +66,7 @@ func TestFilter_Codec_CaseInsensitiveCodecField(t *testing.T) {
 func TestFilter_MaxResolution(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
 	// Keep only variants ≤ 1280x720.
-	out, err := Filter(content, WithMaxResolution(1280, 720))
+	out, err := Filter(content, WithMaxResolution(manifestor.Res720p))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -79,7 +81,7 @@ func TestFilter_MaxResolution(t *testing.T) {
 func TestFilter_MinResolution(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
 	// Keep only variants ≥ 1920x1080.
-	out, err := Filter(content, WithMinResolution(1920, 1080))
+	out, err := Filter(content, WithMinResolution(manifestor.Res1080p))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -93,7 +95,7 @@ func TestFilter_MinResolution(t *testing.T) {
 
 func TestFilter_ExactResolution(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
-	out, err := Filter(content, WithExactResolution(1280, 720))
+	out, err := Filter(content, WithExactResolution(manifestor.Res720p))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -209,8 +211,8 @@ func TestFilter_CustomFilter(t *testing.T) {
 func TestFilter_ComposedFilters(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
 	out, err := Filter(content,
-		WithCodec("h264"),
-		WithMaxResolution(1280, 720),
+		WithCodec(manifestor.H264),
+		WithMaxResolution(manifestor.Res720p),
 		WithMaxBandwidth(4000000),
 	)
 	if err != nil {
@@ -218,7 +220,7 @@ func TestFilter_ComposedFilters(t *testing.T) {
 	}
 	p, _ := Parse(out)
 	for _, v := range p.Variants {
-		if !matchesCodec(v.Codecs, "h264") {
+		if !manifestor.H264.MatchesCodec(v.Codecs) {
 			t.Errorf("variant %q has non-h264 codec", v.URI)
 		}
 		if v.Width > 1280 || v.Height > 720 {
@@ -244,13 +246,13 @@ func TestFilter_AllFiltersOut_ReturnsError(t *testing.T) {
 
 func TestFilter_IFrames_FollowCodecFilter(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
-	out, err := Filter(content, WithCodec("h264"))
+	out, err := Filter(content, WithCodec(manifestor.H264))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	p, _ := Parse(out)
 	for _, f := range p.IFrames {
-		if !matchesCodec(f.Codecs, "h264") {
+		if !manifestor.H264.MatchesCodec(f.Codecs) {
 			t.Errorf("I-frame %q has non-h264 codec %q", f.URI, f.Codecs)
 		}
 	}
@@ -258,7 +260,7 @@ func TestFilter_IFrames_FollowCodecFilter(t *testing.T) {
 
 func TestFilter_IFrames_FollowResolutionFilter(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
-	out, err := Filter(content, WithMaxResolution(1280, 720))
+	out, err := Filter(content, WithMaxResolution(manifestor.Res720p))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -386,7 +388,7 @@ func TestFilter_TransformerAppliedOnlyToSurvivors(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
 	var transformed []string
 	out, err := Filter(content,
-		WithCodec("h264"),
+		WithCodec(manifestor.H264),
 		WithCustomTransformer(func(v *Variant) {
 			transformed = append(transformed, v.URI)
 		}),
@@ -448,7 +450,7 @@ func TestMatchesCodec(t *testing.T) {
 		{"HVC1.1.2.L120.90", "h265", true},
 	}
 	for _, tt := range tests {
-		got := matchesCodec(tt.codecs, tt.want)
+		got := manifestor.Codec(tt.want).MatchesCodec(tt.codecs)
 		if got != tt.match {
 			t.Errorf("matchesCodec(%q, %q) = %v, want %v", tt.codecs, tt.want, got, tt.match)
 		}
@@ -465,7 +467,7 @@ func BenchmarkFilter_ParseFilterSerialize(b *testing.B) {
 	content := string(raw)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = Filter(content, WithCodec("h264"), WithMaxResolution(1920, 1080))
+		_, _ = Filter(content, WithCodec(manifestor.H264), WithMaxResolution(manifestor.Res1080p))
 	}
 }
 
@@ -575,7 +577,7 @@ func TestRewriteURI_MalformedAbsoluteOrigin_RelativeURIUnchanged(t *testing.T) {
 
 func TestFilter_IFrame_MinResolution(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
-	out, err := Filter(content, WithMinResolution(1280, 720))
+	out, err := Filter(content, WithMinResolution(manifestor.Res720p))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -589,7 +591,7 @@ func TestFilter_IFrame_MinResolution(t *testing.T) {
 
 func TestFilter_IFrame_ExactResolution(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
-	out, err := Filter(content, WithExactResolution(1280, 720))
+	out, err := Filter(content, WithExactResolution(manifestor.Res720p))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -619,7 +621,7 @@ func TestFilter_WithMimeType_NoOp(t *testing.T) {
 	// hls.WithMimeType is a no-op for HLS (mime filtering is DASH-only),
 	// but the option must be constructable without panic.
 	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
-	_, err := Filter(content, WithMimeType("video/mp4"))
+	_, err := Filter(content, WithMimeType(manifestor.MimeVideoMP4))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

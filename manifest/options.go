@@ -1,6 +1,7 @@
 package manifest
 
 import (
+	manifestor "github.com/alanzng/manifestor"
 	"github.com/alanzng/manifestor/dash"
 	"github.com/alanzng/manifestor/hls"
 )
@@ -14,39 +15,38 @@ func (sharedOption) dashOption() bool { return true }
 // codecOption implements WithCodec.
 type codecOption struct {
 	sharedOption
-	codec string
+	codec manifestor.Codec
 }
 
 // WithCodec keeps only variants/representations matching the given codec family.
-// Accepted values: "h264", "h265", "vp9", "av1".
-func WithCodec(codec string) Option { return codecOption{codec: codec} }
+func WithCodec(codec manifestor.Codec) Option { return codecOption{codec: codec} }
 
 // maxResOption implements WithMaxResolution.
 type maxResOption struct {
 	sharedOption
-	w, h int
+	res manifestor.Resolution
 }
 
-// WithMaxResolution excludes variants/representations wider or taller than w×h.
-func WithMaxResolution(w, h int) Option { return maxResOption{w: w, h: h} }
+// WithMaxResolution excludes variants/representations wider or taller than r.
+func WithMaxResolution(r manifestor.Resolution) Option { return maxResOption{res: r} }
 
 // minResOption implements WithMinResolution.
 type minResOption struct {
 	sharedOption
-	w, h int
+	res manifestor.Resolution
 }
 
-// WithMinResolution excludes variants/representations smaller than w×h.
-func WithMinResolution(w, h int) Option { return minResOption{w: w, h: h} }
+// WithMinResolution excludes variants/representations smaller than r.
+func WithMinResolution(r manifestor.Resolution) Option { return minResOption{res: r} }
 
 // exactResOption implements WithExactResolution.
 type exactResOption struct {
 	sharedOption
-	w, h int
+	res manifestor.Resolution
 }
 
-// WithExactResolution keeps only variants/representations with exactly w×h.
-func WithExactResolution(w, h int) Option { return exactResOption{w: w, h: h} }
+// WithExactResolution keeps only variants/representations with exactly r.
+func WithExactResolution(r manifestor.Resolution) Option { return exactResOption{res: r} }
 
 // maxBwOption implements WithMaxBandwidth.
 type maxBwOption struct {
@@ -87,11 +87,11 @@ func WithAudioLanguage(lang string) Option { return audioLangOption{lang: lang} 
 // mimeTypeOption implements WithMimeType.
 type mimeTypeOption struct {
 	sharedOption
-	mime string
+	mime manifestor.MimeType
 }
 
 // WithMimeType keeps only representations matching the given MIME type.
-func WithMimeType(mime string) Option { return mimeTypeOption{mime: mime} }
+func WithMimeType(mime manifestor.MimeType) Option { return mimeTypeOption{mime: mime} }
 
 // cdnOption implements WithCDNBaseURL.
 type cdnOption struct {

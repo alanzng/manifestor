@@ -105,7 +105,7 @@ func Filter(content string, opts ...Option) (string, error) {
 
 // variantPasses reports whether v satisfies all active filters in cfg.
 func variantPasses(v *Variant, cfg *filterConfig) bool {
-	if cfg.codec != "" && !matchesCodec(v.Codecs, cfg.codec) {
+	if cfg.codec != "" && !cfg.codec.MatchesCodec(v.Codecs) {
 		return false
 	}
 	if cfg.maxWidth > 0 && v.Width > cfg.maxWidth {
@@ -143,7 +143,7 @@ func variantPasses(v *Variant, cfg *filterConfig) bool {
 
 // iframePasses applies codec, resolution, and bandwidth filters to an I-frame stream (F-14).
 func iframePasses(f *IFrameStream, cfg *filterConfig) bool {
-	if cfg.codec != "" && !matchesCodec(f.Codecs, cfg.codec) {
+	if cfg.codec != "" && !cfg.codec.MatchesCodec(f.Codecs) {
 		return false
 	}
 	if cfg.maxWidth > 0 && f.Width > cfg.maxWidth {
@@ -231,33 +231,4 @@ func rewriteURI(uri string, cfg *filterConfig) string {
 		u.RawQuery = q.Encode()
 	}
 	return u.String()
-}
-
-// matchesCodec reports whether the HLS CODECS attribute value contains a codec
-// from the requested family. Matching is case-insensitive.
-//
-// Families: "h264" (avc1/avc3), "h265" (hvc1/hev1), "vp9" (vp09), "av1" (av01).
-func matchesCodec(codecsField, want string) bool {
-	for _, c := range strings.Split(codecsField, ",") {
-		c = strings.ToLower(strings.TrimSpace(c))
-		switch want {
-		case "h264":
-			if strings.HasPrefix(c, "avc1.") || strings.HasPrefix(c, "avc3.") {
-				return true
-			}
-		case "h265":
-			if strings.HasPrefix(c, "hvc1.") || strings.HasPrefix(c, "hev1.") {
-				return true
-			}
-		case "vp9":
-			if strings.HasPrefix(c, "vp09.") || c == "vp9" {
-				return true
-			}
-		case "av1":
-			if strings.HasPrefix(c, "av01.") {
-				return true
-			}
-		}
-	}
-	return false
 }

@@ -156,11 +156,11 @@ func toHLSOpts(opts []Option) []hls.Option {
 		case codecOption:
 			out = append(out, hls.WithCodec(v.codec))
 		case maxResOption:
-			out = append(out, hls.WithMaxResolution(v.w, v.h))
+			out = append(out, hls.WithMaxResolution(v.res))
 		case minResOption:
-			out = append(out, hls.WithMinResolution(v.w, v.h))
+			out = append(out, hls.WithMinResolution(v.res))
 		case exactResOption:
-			out = append(out, hls.WithExactResolution(v.w, v.h))
+			out = append(out, hls.WithExactResolution(v.res))
 		case maxBwOption:
 			out = append(out, hls.WithMaxBandwidth(v.bps))
 		case minBwOption:
@@ -199,11 +199,11 @@ func toDASHOpts(opts []Option) []dash.Option {
 		case codecOption:
 			out = append(out, dash.WithCodec(v.codec))
 		case maxResOption:
-			out = append(out, dash.WithMaxResolution(v.w, v.h))
+			out = append(out, dash.WithMaxResolution(v.res))
 		case minResOption:
-			out = append(out, dash.WithMinResolution(v.w, v.h))
+			out = append(out, dash.WithMinResolution(v.res))
 		case exactResOption:
-			out = append(out, dash.WithExactResolution(v.w, v.h))
+			out = append(out, dash.WithExactResolution(v.res))
 		case maxBwOption:
 			out = append(out, dash.WithMaxBandwidth(v.bps))
 		case minBwOption:
