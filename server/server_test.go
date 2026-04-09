@@ -5,9 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"strings"
 	"testing"
 
@@ -715,13 +715,17 @@ func mockDASHUpstream(content string) *httptest.Server {
 	}))
 }
 
-func TestHandleFilter_InjectAudio_InvalidJSON(t *testing.T) {
+func b64(s string) string {
+	return base64.StdEncoding.EncodeToString([]byte(s))
+}
+
+func TestHandleFilter_InjectAudio_InvalidBase64(t *testing.T) {
 	upstream := mockDASHUpstream(sampleDASH)
 	defer upstream.Close()
 	srv := newTestServer()
 	defer srv.Close()
 
-	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/test.mpd&inject_audio=notjson")
+	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/test.mpd&inject_audio=!!!notbase64!!!")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -731,13 +735,13 @@ func TestHandleFilter_InjectAudio_InvalidJSON(t *testing.T) {
 	}
 }
 
-func TestHandleFilter_InjectSubtitle_InvalidJSON(t *testing.T) {
+func TestHandleFilter_InjectSubtitle_InvalidBase64(t *testing.T) {
 	upstream := mockDASHUpstream(sampleDASH)
 	defer upstream.Close()
 	srv := newTestServer()
 	defer srv.Close()
 
-	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/test.mpd&inject_subtitle=notjson")
+	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/test.mpd&inject_subtitle=!!!notbase64!!!")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -753,7 +757,7 @@ func TestHandleFilter_InjectAudio_DASH(t *testing.T) {
 	srv := newTestServer()
 	defer srv.Close()
 
-	audioJSON := `[{"lang":"vi","name":"Vietnamese","mime_type":"audio/mp4","representations":[{"id":"audio-vi","bandwidth":128000,"codecs":"mp4a.40.2","base_url":"https://cdn.example.com/audio-vi.mp4"}]}]`
+	audioJSON := b64(`[{"lang":"vi","name":"Vietnamese","mime_type":"audio/mp4","representations":[{"id":"audio-vi","bandwidth":128000,"codecs":"mp4a.40.2","base_url":"https://cdn.example.com/audio-vi.mp4"}]}]`)
 	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/test.mpd&inject_audio="+audioJSON)
 	if err != nil {
 		t.Fatal(err)
@@ -779,7 +783,7 @@ func TestHandleFilter_InjectSubtitle_DASH(t *testing.T) {
 	srv := newTestServer()
 	defer srv.Close()
 
-	subJSON := url.QueryEscape(`[{"lang":"vi","name":"VietnameseSub","mime_type":"text/vtt","content_type":"text","representations":[{"id":"sub-vi","bandwidth":16,"base_url":"https://cdn.example.com/sub-vi.vtt"}]}]`)
+	subJSON := b64(`[{"lang":"vi","name":"Vietnamese Sub","mime_type":"text/vtt","content_type":"text","representations":[{"id":"sub-vi","bandwidth":16,"base_url":"https://cdn.example.com/sub-vi.vtt"}]}]`)
 	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/test.mpd&inject_subtitle="+subJSON)
 	if err != nil {
 		t.Fatal(err)
@@ -805,7 +809,7 @@ func TestHandleFilter_InjectAudio_HLS(t *testing.T) {
 	srv := newTestServer()
 	defer srv.Close()
 
-	audioJSON := `[{"group_id":"audio","lang":"vi","name":"Vietnamese","uri":"https://cdn.example.com/audio-vi.m3u8","default":true,"auto_select":true}]`
+	audioJSON := b64(`[{"group_id":"audio","lang":"vi","name":"Vietnamese","uri":"https://cdn.example.com/audio-vi.m3u8","default":true,"auto_select":true}]`)
 	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/test.m3u8&inject_audio="+audioJSON)
 	if err != nil {
 		t.Fatal(err)
@@ -831,7 +835,7 @@ func TestHandleFilter_InjectSubtitle_HLS(t *testing.T) {
 	srv := newTestServer()
 	defer srv.Close()
 
-	subJSON := `[{"group_id":"subs","lang":"vi","name":"Vietnamese","uri":"https://cdn.example.com/sub-vi.m3u8","forced":false}]`
+	subJSON := b64(`[{"group_id":"subs","lang":"vi","name":"Vietnamese","uri":"https://cdn.example.com/sub-vi.m3u8","forced":false}]`)
 	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/test.m3u8&inject_subtitle="+subJSON)
 	if err != nil {
 		t.Fatal(err)

@@ -3,6 +3,7 @@
 package server
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -139,8 +140,8 @@ func (s *Server) handleFilter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if raw := q.Get("inject_audio"); raw != "" {
-		var tracks []injectTrackJSON
-		if err := json.Unmarshal([]byte(raw), &tracks); err != nil {
+		tracks, err := decodeInjectTracks(raw)
+		if err != nil {
 			http.Error(w, "invalid inject_audio: "+err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -149,8 +150,8 @@ func (s *Server) handleFilter(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if raw := q.Get("inject_subtitle"); raw != "" {
-		var tracks []injectTrackJSON
-		if err := json.Unmarshal([]byte(raw), &tracks); err != nil {
+		tracks, err := decodeInjectTracks(raw)
+		if err != nil {
 			http.Error(w, "invalid inject_subtitle: "+err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -452,6 +453,23 @@ type segmentBaseJSON struct {
 	IndexRange          string `json:"index_range"`
 	Initialization      string `json:"initialization"`
 	InitializationRange string `json:"initialization_range"`
+}
+
+// decodeInjectTracks base64-decodes the value and unmarshals it as a JSON array of injectTrackJSON.
+func decodeInjectTracks(raw string) ([]injectTrackJSON, error) {
+	b, err := base64.StdEncoding.DecodeString(raw)
+	if err != nil {
+		// Also accept URL-safe base64.
+		b, err = base64.URLEncoding.DecodeString(raw)
+		if err != nil {
+			return nil, err
+		}
+	}
+	var tracks []injectTrackJSON
+	if err := json.Unmarshal(b, &tracks); err != nil {
+		return nil, err
+	}
+	return tracks, nil
 }
 
 // injectTrackJSON is the unified schema for inject_audio / inject_subtitle query params.
