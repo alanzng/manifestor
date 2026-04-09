@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -131,6 +132,10 @@ func (s *Server) handleFilter(w http.ResponseWriter, r *http.Request) {
 	}
 	if origin := q.Get("origin"); origin != "" {
 		opts = append(opts, manifest.WithAbsoluteURIs(origin))
+	} else {
+		if upstreamOrigin := deriveOriginFromUpstreamURL(upstreamURL); upstreamOrigin != "" {
+			opts = append(opts, manifest.WithAbsoluteURIs(upstreamOrigin))
+		}
 	}
 
 	result, err := manifest.FilterFromURL(upstreamURL, opts...)
@@ -226,6 +231,26 @@ func detectContentType(content string) string {
 		return "application/vnd.apple.mpegurl"
 	}
 	return "application/dash+xml"
+}
+
+func deriveOriginFromUpstreamURL(upstreamURL string) string {
+	u, err := url.Parse(upstreamURL)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return ""
+	}
+
+	originPath := u.Path
+	if originPath == "" {
+		originPath = "/"
+	} else if idx := strings.LastIndex(originPath, "/"); idx >= 0 {
+		originPath = originPath[:idx+1]
+	}
+
+	u.Path = originPath
+	u.RawPath = ""
+	u.RawQuery = ""
+	u.Fragment = ""
+	return u.String()
 }
 
 func buildHLS(req *buildRequest) (string, error) {
