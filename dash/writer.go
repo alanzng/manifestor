@@ -63,6 +63,17 @@ func buildXMLAdaptation(as AdaptationSet) xmlOutAdaptation {
 			StartNumber:    omitZeroInt(st.StartNumber),
 		}
 	}
+	if as.SegmentBase != nil {
+		sb := as.SegmentBase
+		xsb := &xmlOutSegmentBase{IndexRange: sb.IndexRange}
+		if sb.Initialization != "" || sb.InitializationRange != "" {
+			xsb.Initialization = &xmlOutSBInitialization{
+				SourceURL: sb.Initialization,
+				Range:     sb.InitializationRange,
+			}
+		}
+		xa.SegmentBase = xsb
+	}
 	for _, r := range as.Representations {
 		xr := xmlOutRepresentation{
 			ID:        r.ID,
@@ -78,6 +89,17 @@ func buildXMLAdaptation(as AdaptationSet) xmlOutAdaptation {
 		// Omit MimeType on Representation when it matches the AdaptationSet.
 		if r.MimeType != "" && r.MimeType != as.MimeType {
 			xr.MimeType = r.MimeType
+		}
+		if r.SegmentBase != nil {
+			sb := r.SegmentBase
+			xsb := &xmlOutSegmentBase{IndexRange: sb.IndexRange}
+			if sb.Initialization != "" || sb.InitializationRange != "" {
+				xsb.Initialization = &xmlOutSBInitialization{
+					SourceURL: sb.Initialization,
+					Range:     sb.InitializationRange,
+				}
+			}
+			xr.SegmentBase = xsb
 		}
 		if r.AudioChannelConfiguration != nil {
 			xr.AudioChannelConfiguration = &xmlOutAudioChannelConfiguration{
@@ -136,7 +158,18 @@ type xmlOutAdaptation struct {
 	Label           string                 `xml:"label,attr,omitempty"`
 	Roles           []xmlOutRole           `xml:"Role,omitempty"`
 	SegmentTemplate *xmlOutSegmentTemplate `xml:"SegmentTemplate,omitempty"`
+	SegmentBase     *xmlOutSegmentBase     `xml:"SegmentBase,omitempty"`
 	Representations []xmlOutRepresentation `xml:"Representation"`
+}
+
+type xmlOutSegmentBase struct {
+	IndexRange     string                  `xml:"indexRange,attr,omitempty"`
+	Initialization *xmlOutSBInitialization `xml:"Initialization,omitempty"`
+}
+
+type xmlOutSBInitialization struct {
+	SourceURL string `xml:"sourceURL,attr,omitempty"`
+	Range     string `xml:"range,attr,omitempty"`
 }
 
 type xmlOutRepresentation struct {
@@ -148,6 +181,7 @@ type xmlOutRepresentation struct {
 	FrameRate                 string                           `xml:"frameRate,attr,omitempty"`
 	MimeType                  string                           `xml:"mimeType,attr,omitempty"`
 	BaseURL                   string                           `xml:"BaseURL,omitempty"`
+	SegmentBase               *xmlOutSegmentBase               `xml:"SegmentBase,omitempty"`
 	AudioChannelConfiguration *xmlOutAudioChannelConfiguration `xml:"AudioChannelConfiguration,omitempty"`
 }
 

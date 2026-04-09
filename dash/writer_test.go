@@ -316,6 +316,60 @@ func TestSerialize_AdaptationSetLabel(t *testing.T) {
 	}
 }
 
+func TestSerialize_SegmentBase_RoundTrip(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/vieon_vod.mpd")
+	m, _ := Parse(content)
+	out, err := Serialize(m)
+	if err != nil {
+		t.Fatalf("Serialize error: %v", err)
+	}
+	m2, _ := Parse(out)
+
+	r := m2.Periods[0].AdaptationSets[0].Representations[0]
+	if r.SegmentBase == nil {
+		t.Fatal("SegmentBase is nil after round-trip")
+	}
+	if r.SegmentBase.IndexRange != "824-6591" {
+		t.Errorf("IndexRange = %q, want 824-6591", r.SegmentBase.IndexRange)
+	}
+	if r.SegmentBase.InitializationRange != "0-823" {
+		t.Errorf("InitializationRange = %q, want 0-823", r.SegmentBase.InitializationRange)
+	}
+}
+
+func TestSerialize_SegmentBase_OnAdaptationSet_RoundTrip(t *testing.T) {
+	m := &MPD{
+		Periods: []Period{{
+			AdaptationSets: []AdaptationSet{{
+				MimeType: "video/mp4",
+				SegmentBase: &SegmentBase{
+					IndexRange:     "0-819",
+					Initialization: "init.mp4",
+				},
+				Representations: []Representation{{
+					ID: "v1", Bandwidth: 3000000, Codecs: "avc1.64001F",
+				}},
+			}},
+		}},
+	}
+	out, err := Serialize(m)
+	if err != nil {
+		t.Fatalf("Serialize error: %v", err)
+	}
+	m2, _ := Parse(out)
+
+	as := m2.Periods[0].AdaptationSets[0]
+	if as.SegmentBase == nil {
+		t.Fatal("SegmentBase is nil after round-trip")
+	}
+	if as.SegmentBase.IndexRange != "0-819" {
+		t.Errorf("IndexRange = %q, want 0-819", as.SegmentBase.IndexRange)
+	}
+	if as.SegmentBase.Initialization != "init.mp4" {
+		t.Errorf("Initialization = %q, want init.mp4", as.SegmentBase.Initialization)
+	}
+}
+
 func TestSerialize_AdaptationSetRole(t *testing.T) {
 	m := &MPD{
 		Periods: []Period{{

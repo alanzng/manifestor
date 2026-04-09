@@ -58,6 +58,7 @@ type xmlRepresentation struct {
 	MimeType                  string                        `xml:"mimeType,attr"`
 	StartWithSAP              string                        `xml:"startWithSAP,attr"`
 	BaseURL                   string                        `xml:"BaseURL"`
+	SegmentBase               *xmlSegmentBase               `xml:"SegmentBase"`
 	AudioChannelConfiguration *xmlAudioChannelConfiguration `xml:"AudioChannelConfiguration"`
 }
 
@@ -76,6 +77,7 @@ type xmlSegmentBase struct {
 
 type xmlSBInitialization struct {
 	SourceURL string `xml:"sourceURL,attr"`
+	Range     string `xml:"range,attr"`
 }
 
 // Parse parses a DASH MPD document from a raw XML string and returns an MPD.
@@ -160,6 +162,9 @@ func convertRepresentation(xr xmlRepresentation) Representation {
 		StartWithSAP: atoi(xr.StartWithSAP),
 		BaseURL:      xr.BaseURL,
 	}
+	if xr.SegmentBase != nil {
+		r.SegmentBase = convertSegmentBase(xr.SegmentBase)
+	}
 	if xr.AudioChannelConfiguration != nil {
 		r.AudioChannelConfiguration = &AudioChannelConfiguration{
 			SchemeIDURI: xr.AudioChannelConfiguration.SchemeIDURI,
@@ -183,6 +188,7 @@ func convertSegmentBase(x *xmlSegmentBase) *SegmentBase {
 	sb := &SegmentBase{IndexRange: x.IndexRange}
 	if x.Initialization != nil {
 		sb.Initialization = x.Initialization.SourceURL
+		sb.InitializationRange = x.Initialization.Range
 	}
 	return sb
 }

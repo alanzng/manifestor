@@ -57,6 +57,7 @@ type Representation struct {
 	MimeType                  string
 	StartWithSAP              int
 	BaseURL                   string
+	SegmentBase               *SegmentBase
 	AudioChannelConfiguration *AudioChannelConfiguration
 }
 
@@ -71,8 +72,9 @@ type SegmentTemplate struct {
 
 // SegmentBase represents a <SegmentBase> element.
 type SegmentBase struct {
-	IndexRange     string
-	Initialization string
+	IndexRange          string
+	Initialization      string // sourceURL of the initialization segment
+	InitializationRange string // byte range of the initialization segment
 }
 
 // MPDConfig holds the top-level configuration for the DASH MPD builder.
@@ -94,6 +96,7 @@ type RepresentationParams struct {
 	MimeType                  string
 	StartWithSAP              int
 	BaseURL                   string
+	SegmentBase               *SegmentBaseParams
 	AudioChannelConfiguration *AudioChannelConfiguration
 }
 
@@ -108,8 +111,9 @@ type SegmentTemplateParams struct {
 
 // SegmentBaseParams holds parameters for a SegmentBase.
 type SegmentBaseParams struct {
-	IndexRange     string
-	Initialization string
+	IndexRange          string
+	Initialization      string
+	InitializationRange string
 }
 
 // AdaptationSetParams holds parameters for an AdaptationSet in the builder.
