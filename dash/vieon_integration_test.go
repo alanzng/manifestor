@@ -8,13 +8,15 @@ package dash
 import (
 	"strings"
 	"testing"
+
+	manifestor "github.com/alanzng/manifestor"
 )
 
 const vieonCDNBase = "https://vod-bp.vieon.vn/fb3ae865ebf27eec47466c132d33f30d/1775555787000/ott-vod-202603/vod/2026/03/12/bffa9046-2fe5-4b01-888e-ed9d91ce035e/"
 
 func TestVieon_Filter_H265Only(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/vieon_vod.mpd")
-	out, err := Filter(content, WithCodec("h265"))
+	out, err := Filter(content, WithCodec(manifestor.H265))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -33,7 +35,7 @@ func TestVieon_Filter_H265Only(t *testing.T) {
 
 func TestVieon_Filter_MaxResolution720p(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/vieon_vod.mpd")
-	out, err := Filter(content, WithCodec("h265"), WithMaxResolution(1280, 720))
+	out, err := Filter(content, WithCodec(manifestor.H265), WithMaxResolution(manifestor.Res720p))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -69,8 +71,8 @@ func TestVieon_Filter_MaxResolution720p(t *testing.T) {
 func TestVieon_Filter_AbsoluteBaseURLs(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/vieon_vod.mpd")
 	out, err := Filter(content,
-		WithCodec("h265"),
-		WithMaxResolution(1280, 720),
+		WithCodec(manifestor.H265),
+		WithMaxResolution(manifestor.Res720p),
 		WithAbsoluteURIs(vieonCDNBase),
 	)
 	if err != nil {
@@ -98,8 +100,8 @@ func TestVieon_Filter_AbsoluteBaseURLs(t *testing.T) {
 func TestVieon_Filter_VideoBaseURLContent(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/vieon_vod.mpd")
 	out, err := Filter(content,
-		WithCodec("h265"),
-		WithMaxResolution(1280, 720),
+		WithCodec(manifestor.H265),
+		WithMaxResolution(manifestor.Res720p),
 		WithAbsoluteURIs(vieonCDNBase),
 	)
 	if err != nil {
@@ -149,8 +151,8 @@ func TestVieon_InjectDubbedAudio(t *testing.T) {
 	}
 
 	out, err := Filter(content,
-		WithCodec("h265"),
-		WithMaxResolution(1280, 720),
+		WithCodec(manifestor.H265),
+		WithMaxResolution(manifestor.Res720p),
 		WithAbsoluteURIs(vieonCDNBase),
 		WithInjectAdaptationSet(dubbedAudio),
 	)
@@ -206,8 +208,8 @@ func TestVieon_InjectSubtitle(t *testing.T) {
 	}
 
 	out, err := Filter(content,
-		WithCodec("h265"),
-		WithMaxResolution(1280, 720),
+		WithCodec(manifestor.H265),
+		WithMaxResolution(manifestor.Res720p),
 		WithAbsoluteURIs(vieonCDNBase),
 		WithInjectAdaptationSet(subtitle),
 	)
@@ -247,8 +249,8 @@ func TestVieon_FullPipeline_AdaptationSetCount(t *testing.T) {
 	const dubbedCDNBase = "https://vod-bp.vieon.vn/3ad1dcfca2aeaf6a13118a3fed017be9/1775555787000/ott-vod-202603/vod/2026/03/24/5f5bbfae-3d8a-4654-8b69-de5dbe22e518/"
 
 	out, err := Filter(content,
-		WithCodec("h265"),
-		WithMaxResolution(1280, 720),
+		WithCodec(manifestor.H265),
+		WithMaxResolution(manifestor.Res720p),
 		WithAbsoluteURIs(vieonCDNBase),
 		WithInjectAdaptationSet(AdaptationSetParams{
 			MimeType: "audio/mp4",
@@ -288,8 +290,8 @@ func TestVieon_FullPipeline_AdaptationSetCount(t *testing.T) {
 func TestVieon_OriginalAudioPreserved(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/vieon_vod.mpd")
 	out, err := Filter(content,
-		WithCodec("h265"),
-		WithMaxResolution(1280, 720),
+		WithCodec(manifestor.H265),
+		WithMaxResolution(manifestor.Res720p),
 		WithAbsoluteURIs(vieonCDNBase),
 	)
 	if err != nil {

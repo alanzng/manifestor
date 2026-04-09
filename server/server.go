@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	manifestor "github.com/alanzng/manifestor"
 	"github.com/alanzng/manifestor/dash"
 	"github.com/alanzng/manifestor/hls"
 	"github.com/alanzng/manifestor/manifest"
@@ -72,23 +73,28 @@ func (s *Server) handleFilter(w http.ResponseWriter, r *http.Request) {
 	var opts []manifest.Option
 
 	if codec := q.Get("codec"); codec != "" {
-		opts = append(opts, manifest.WithCodec(codec))
+		c, err := manifestor.ParseCodec(codec)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		opts = append(opts, manifest.WithCodec(c))
 	}
 	if maxRes := q.Get("max_res"); maxRes != "" {
-		w2, h, err := parseResolution(maxRes)
+		r, err := manifestor.ParseResolution(maxRes)
 		if err != nil {
 			http.Error(w, "invalid max_res: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		opts = append(opts, manifest.WithMaxResolution(w2, h))
+		opts = append(opts, manifest.WithMaxResolution(r))
 	}
 	if minRes := q.Get("min_res"); minRes != "" {
-		w2, h, err := parseResolution(minRes)
+		r, err := manifestor.ParseResolution(minRes)
 		if err != nil {
 			http.Error(w, "invalid min_res: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		opts = append(opts, manifest.WithMinResolution(w2, h))
+		opts = append(opts, manifest.WithMinResolution(r))
 	}
 	if maxBw := q.Get("max_bw"); maxBw != "" {
 		v, err := strconv.Atoi(maxBw)
@@ -220,23 +226,6 @@ func detectContentType(content string) string {
 		return "application/vnd.apple.mpegurl"
 	}
 	return "application/dash+xml"
-}
-
-// parseResolution parses "WxH" into w and h.
-func parseResolution(s string) (w, h int, err error) {
-	parts := strings.SplitN(s, "x", 2)
-	if len(parts) != 2 {
-		return 0, 0, errors.New("expected WxH format")
-	}
-	w, err = strconv.Atoi(parts[0])
-	if err != nil {
-		return 0, 0, errors.New("invalid width")
-	}
-	h, err = strconv.Atoi(parts[1])
-	if err != nil {
-		return 0, 0, errors.New("invalid height")
-	}
-	return w, h, nil
 }
 
 func buildHLS(req *buildRequest) (string, error) {

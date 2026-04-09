@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	manifestor "github.com/alanzng/manifestor"
 	"github.com/alanzng/manifestor/dash"
 	"github.com/alanzng/manifestor/hls"
 )
@@ -61,7 +62,7 @@ func TestDetect_ErrInvalidFormat_Empty(t *testing.T) {
 
 func TestFilter_HLS_Codec(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/bento4_mixed_codecs.m3u8")
-	out, err := Filter(content, WithCodec("h264"))
+	out, err := Filter(content, WithCodec(manifestor.H264))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -99,7 +100,7 @@ func TestFilter_HLS_ErrNoVariantsRemain(t *testing.T) {
 
 func TestFilter_DASH_Codec(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
-	out, err := Filter(content, WithCodec("h264"))
+	out, err := Filter(content, WithCodec(manifestor.H264))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -304,7 +305,7 @@ func TestFilter_HLS_MinBandwidth(t *testing.T) {
 
 func TestFilter_HLS_MaxResolution(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/bento4_master.m3u8")
-	out, err := Filter(content, WithMaxResolution(1280, 720))
+	out, err := Filter(content, WithMaxResolution(manifestor.Res720p))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -318,7 +319,7 @@ func TestFilter_HLS_MaxResolution(t *testing.T) {
 
 func TestFilter_HLS_MinResolution(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/bento4_master.m3u8")
-	out, err := Filter(content, WithMinResolution(1280, 720))
+	out, err := Filter(content, WithMinResolution(manifestor.Res720p))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -332,7 +333,7 @@ func TestFilter_HLS_MinResolution(t *testing.T) {
 
 func TestFilter_HLS_ExactResolution(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/hls/bento4_master.m3u8")
-	out, err := Filter(content, WithExactResolution(1920, 1080))
+	out, err := Filter(content, WithExactResolution(manifestor.Res1080p))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -404,7 +405,7 @@ func TestFilter_HLS_AuthToken(t *testing.T) {
 
 func TestFilter_DASH_MaxResolution(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/isoff_ondemand.mpd")
-	out, err := Filter(content, WithMaxResolution(1280, 720))
+	out, err := Filter(content, WithMaxResolution(manifestor.Res720p))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -418,7 +419,7 @@ func TestFilter_DASH_MaxResolution(t *testing.T) {
 
 func TestFilter_DASH_MinResolution(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/isoff_ondemand.mpd")
-	out, err := Filter(content, WithMinResolution(1280, 720))
+	out, err := Filter(content, WithMinResolution(manifestor.Res720p))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -432,7 +433,7 @@ func TestFilter_DASH_MinResolution(t *testing.T) {
 
 func TestFilter_DASH_ExactResolution(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/isoff_ondemand.mpd")
-	out, err := Filter(content, WithExactResolution(1920, 1080))
+	out, err := Filter(content, WithExactResolution(manifestor.Res1080p))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -475,7 +476,7 @@ func TestFilter_DASH_MaxFrameRate(t *testing.T) {
 
 func TestFilter_DASH_MimeType(t *testing.T) {
 	content := mustReadFixture(t, "../testdata/dash/isoff_ondemand.mpd")
-	out, err := Filter(content, WithMimeType("video/mp4"))
+	out, err := Filter(content, WithMimeType(manifestor.MimeVideoMP4))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

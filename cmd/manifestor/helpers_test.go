@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	manifestor "github.com/alanzng/manifestor"
 )
 
 // moduleRoot returns the module root directory, derived from the location of
@@ -26,31 +28,31 @@ func testFixture(parts ...string) string {
 // ---- parseResolution ----
 
 func TestParseResolution_Valid(t *testing.T) {
-	w, h, err := parseResolution("1920x1080")
+	res, err := manifestor.ParseResolution("1920x1080")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if w != 1920 || h != 1080 {
-		t.Errorf("got %dx%d, want 1920x1080", w, h)
+	if res.Width != 1920 || res.Height != 1080 {
+		t.Errorf("got %dx%d, want 1920x1080", res.Width, res.Height)
 	}
 }
 
 func TestParseResolution_MissingX(t *testing.T) {
-	_, _, err := parseResolution("1920")
+	_, err := manifestor.ParseResolution("1920")
 	if err == nil {
 		t.Error("expected error for missing x separator")
 	}
 }
 
 func TestParseResolution_InvalidWidth(t *testing.T) {
-	_, _, err := parseResolution("abcx1080")
+	_, err := manifestor.ParseResolution("abcx1080")
 	if err == nil {
 		t.Error("expected error for invalid width")
 	}
 }
 
 func TestParseResolution_InvalidHeight(t *testing.T) {
-	_, _, err := parseResolution("1920xabc")
+	_, err := manifestor.ParseResolution("1920xabc")
 	if err == nil {
 		t.Error("expected error for invalid height")
 	}

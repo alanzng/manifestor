@@ -1,10 +1,14 @@
 package hls
 
+import (
+	manifestor "github.com/alanzng/manifestor"
+)
+
 // Option configures the behaviour of Filter().
 type Option func(*filterConfig)
 
 type filterConfig struct {
-	codec             string
+	codec             manifestor.Codec
 	maxWidth          int
 	maxHeight         int
 	minWidth          int
@@ -15,7 +19,7 @@ type filterConfig struct {
 	minBandwidth      int
 	maxFrameRate      float64
 	audioLanguage     string
-	mimeType          string
+	mimeType          manifestor.MimeType
 	cdnBaseURL        string
 	absoluteOrigin    string
 	authToken         string
@@ -28,24 +32,23 @@ type filterConfig struct {
 }
 
 // WithCodec keeps only variants whose Codecs field matches the given codec family.
-// Accepted values: "h264", "h265", "vp9", "av1".
-func WithCodec(codec string) Option {
+func WithCodec(codec manifestor.Codec) Option {
 	return func(c *filterConfig) { c.codec = codec }
 }
 
-// WithMaxResolution excludes variants wider or taller than w×h.
-func WithMaxResolution(w, h int) Option {
-	return func(c *filterConfig) { c.maxWidth = w; c.maxHeight = h }
+// WithMaxResolution excludes variants wider or taller than r.
+func WithMaxResolution(r manifestor.Resolution) Option {
+	return func(c *filterConfig) { c.maxWidth = r.Width; c.maxHeight = r.Height }
 }
 
-// WithMinResolution excludes variants smaller than w×h.
-func WithMinResolution(w, h int) Option {
-	return func(c *filterConfig) { c.minWidth = w; c.minHeight = h }
+// WithMinResolution excludes variants smaller than r.
+func WithMinResolution(r manifestor.Resolution) Option {
+	return func(c *filterConfig) { c.minWidth = r.Width; c.minHeight = r.Height }
 }
 
-// WithExactResolution keeps only variants with exactly w×h.
-func WithExactResolution(w, h int) Option {
-	return func(c *filterConfig) { c.exactWidth = w; c.exactHeight = h }
+// WithExactResolution keeps only variants with exactly r.
+func WithExactResolution(r manifestor.Resolution) Option {
+	return func(c *filterConfig) { c.exactWidth = r.Width; c.exactHeight = r.Height }
 }
 
 // WithMaxBandwidth excludes variants above bps bits/s.
@@ -69,7 +72,7 @@ func WithAudioLanguage(lang string) Option {
 }
 
 // WithMimeType keeps only variants matching the given MIME type.
-func WithMimeType(mime string) Option {
+func WithMimeType(mime manifestor.MimeType) Option {
 	return func(c *filterConfig) { c.mimeType = mime }
 }
 
