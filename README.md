@@ -52,11 +52,14 @@ docker pull ghcr.io/alanng/manifestor:latest
 ### Filter an HLS manifest
 
 ```go
-import "github.com/alanzng/manifestor/manifest"
+import (
+    manifestor "github.com/alanzng/manifestor"
+    "github.com/alanzng/manifestor/manifest"
+)
 
 filtered, err := manifest.Filter(content,
-    manifest.WithCodec("h264"),
-    manifest.WithMaxResolution(1920, 1080),
+    manifest.WithCodec(manifestor.H264),
+    manifest.WithMaxResolution(manifestor.Res1080p),
     manifest.WithMaxBandwidth(5_000_000),
     manifest.WithCDNBaseURL("https://cdn.example.com"),
 )
@@ -66,7 +69,7 @@ filtered, err := manifest.Filter(content,
 
 ```go
 filtered, err := manifest.FilterFromURL("https://example.com/master.m3u8",
-    manifest.WithCodec("h264"),
+    manifest.WithCodec(manifestor.H264),
     manifest.WithAuthToken("token=abc123"),
 )
 ```
@@ -79,6 +82,7 @@ Take a Bento4-generated master playlist with mixed AVC1/HVC1 video and a single 
 
 ```go
 import (
+    manifestor "github.com/alanzng/manifestor"
     "github.com/alanzng/manifestor/hls"
     "github.com/alanzng/manifestor/manifest"
 )
@@ -87,8 +91,8 @@ const cdnBase = "https://vod-bp.vieon.vn/abc123/.../vod/2026/03/12/uuid/"
 const dubbedBase = "https://vod-bp.vieon.vn/def456/.../vod/2026/03/24/uuid2/"
 
 out, err := manifest.Filter(content,
-    manifest.WithCodec("h265"),
-    manifest.WithMaxResolution(1280, 720),
+    manifest.WithCodec(manifestor.H265),
+    manifest.WithMaxResolution(manifestor.Res720p),
     manifest.WithAbsoluteURIs(cdnBase),
     manifest.WithHLSVariantSubtitleGroup("subs"),
     manifest.WithHLSInjectSubtitle(hls.SubtitleTrackParams{
@@ -111,13 +115,14 @@ out, err := manifest.Filter(content,
 
 ```go
 import (
+    manifestor "github.com/alanzng/manifestor"
     "github.com/alanzng/manifestor/dash"
     "github.com/alanzng/manifestor/manifest"
 )
 
 out, err := manifest.Filter(content,
-    manifest.WithCodec("h265"),
-    manifest.WithMaxResolution(1280, 720),
+    manifest.WithCodec(manifestor.H265),
+    manifest.WithMaxResolution(manifestor.Res720p),
     manifest.WithAbsoluteURIs(cdnBase),
     manifest.WithDASHInjectAdaptationSet(dash.AdaptationSetParams{
         MimeType: "audio/mp4",
@@ -253,15 +258,15 @@ manifestor build --format hls --variants spec.json --output master.m3u8
 
 | Option | Description |
 |---|---|
-| `WithCodec(codec)` | Keep only **video** variants matching codec: `h264`, `h265`, `vp9`, `av1`. Audio tracks are always preserved. |
-| `WithMaxResolution(w, h)` | Exclude variants wider or taller than `w×h` |
-| `WithMinResolution(w, h)` | Exclude variants smaller than `w×h` |
-| `WithExactResolution(w, h)` | Keep only variants with exactly `w×h` |
+| `WithCodec(manifestor.Codec)` | Keep only **video** variants matching codec: `H264`, `H265`, `VP9`, `AV1`. Audio tracks are always preserved. Use `manifestor.ParseCodec(s)` for string input. |
+| `WithMaxResolution(manifestor.Resolution)` | Exclude variants wider or taller than the resolution. Presets: `Res720p`, `Res1080p`, `Res4K`, etc. |
+| `WithMinResolution(manifestor.Resolution)` | Exclude variants smaller than the resolution |
+| `WithExactResolution(manifestor.Resolution)` | Keep only variants matching exactly |
 | `WithMaxBandwidth(bps)` | Exclude variants above `bps` bits/s |
 | `WithMinBandwidth(bps)` | Exclude variants below `bps` bits/s |
 | `WithMaxFrameRate(fps)` | Exclude variants with frame rate above `fps` |
 | `WithAudioLanguage(lang)` | Keep only audio tracks matching BCP-47 `lang` |
-| `WithMimeType(mime)` | Keep only representations matching MIME type (DASH only) |
+| `WithMimeType(manifestor.MimeType)` | Keep only representations matching MIME type (DASH only). Constants: `MimeVideoMP4`, `MimeAudioMP4`, `MimeTextVTT`, etc. |
 | `WithCDNBaseURL(base)` | Rewrite all URIs to use `base` as CDN origin |
 | `WithAbsoluteURIs(origin)` | Resolve relative URIs to absolute using `origin` |
 | `WithAuthToken(token)` | Append `token=` query parameter to all URIs |
