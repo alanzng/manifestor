@@ -71,8 +71,9 @@ type SegmentTemplate struct {
 
 // SegmentBase represents a <SegmentBase> element.
 type SegmentBase struct {
-	IndexRange     string
-	Initialization string
+	IndexRange          string
+	Initialization      string // sourceURL of the initialization segment
+	InitializationRange string // byte range of the initialization segment
 }
 
 // MPDConfig holds the top-level configuration for the DASH MPD builder.

@@ -76,6 +76,7 @@ type xmlSegmentBase struct {
 
 type xmlSBInitialization struct {
 	SourceURL string `xml:"sourceURL,attr"`
+	Range     string `xml:"range,attr"`
 }
 
 // Parse parses a DASH MPD document from a raw XML string and returns an MPD.
@@ -183,6 +184,7 @@ func convertSegmentBase(x *xmlSegmentBase) *SegmentBase {
 	sb := &SegmentBase{IndexRange: x.IndexRange}
 	if x.Initialization != nil {
 		sb.Initialization = x.Initialization.SourceURL
+		sb.InitializationRange = x.Initialization.Range
 	}
 	return sb
 }
