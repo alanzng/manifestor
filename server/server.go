@@ -157,6 +157,10 @@ func (s *Server) handleFilter(w http.ResponseWriter, r *http.Request) {
 		}
 		for _, t := range tracks {
 			opts = append(opts, injectTrackToOptions(t, true)...)
+			// Wire the subtitle group to all surviving HLS variants.
+			if t.GroupID != "" {
+				opts = append(opts, manifest.WithHLSVariantSubtitleGroup(t.GroupID))
+			}
 		}
 	}
 

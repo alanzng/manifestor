@@ -850,6 +850,9 @@ func TestHandleFilter_InjectSubtitle_HLS(t *testing.T) {
 	if !strings.Contains(body, "sub-vi.m3u8") {
 		t.Errorf("injected HLS subtitle URI not found in output:\n%s", body)
 	}
+	if !strings.Contains(body, `SUBTITLES="subs"`) {
+		t.Errorf("SUBTITLES group not wired to variants in output:\n%s", body)
+	}
 }
 
 func TestHandleFilter_GenericBadGateway(t *testing.T) {
