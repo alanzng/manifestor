@@ -488,3 +488,36 @@ func TestParse_SegmentBase(t *testing.T) {
 		t.Errorf("Initialization = %q, want init.mp4", as.SegmentBase.Initialization)
 	}
 }
+
+func TestParse_SegmentBase_InitializationRange(t *testing.T) {
+	mpd := `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static">
+  <Period>
+    <AdaptationSet mimeType="video/mp4">
+      <Representation id="v1" bandwidth="563419" codecs="avc1.4D401E" width="640" height="360">
+        <BaseURL>media-video-avc1-1.mp4</BaseURL>
+        <SegmentBase indexRange="824-6591">
+          <Initialization range="0-823"/>
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	m, err := Parse(mpd)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	r := m.Periods[0].AdaptationSets[0].Representations[0]
+	if r.BaseURL != "media-video-avc1-1.mp4" {
+		t.Errorf("BaseURL = %q, want media-video-avc1-1.mp4", r.BaseURL)
+	}
+	if r.SegmentBase == nil {
+		t.Fatal("SegmentBase is nil on Representation")
+	}
+	if r.SegmentBase.IndexRange != "824-6591" {
+		t.Errorf("IndexRange = %q, want 824-6591", r.SegmentBase.IndexRange)
+	}
+	if r.SegmentBase.InitializationRange != "0-823" {
+		t.Errorf("InitializationRange = %q, want 0-823", r.SegmentBase.InitializationRange)
+	}
+}

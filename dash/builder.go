@@ -114,7 +114,26 @@ func convertAdaptationSetParams(p AdaptationSetParams) AdaptationSet {
 	}
 
 	for _, r := range p.Representations {
-		as.Representations = append(as.Representations, Representation(r))
+		rep := Representation{
+			ID:                        r.ID,
+			Bandwidth:                 r.Bandwidth,
+			Codecs:                    r.Codecs,
+			Width:                     r.Width,
+			Height:                    r.Height,
+			FrameRate:                 r.FrameRate,
+			MimeType:                  r.MimeType,
+			StartWithSAP:              r.StartWithSAP,
+			BaseURL:                   r.BaseURL,
+			AudioChannelConfiguration: r.AudioChannelConfiguration,
+		}
+		if r.SegmentBase != nil {
+			rep.SegmentBase = &SegmentBase{
+				IndexRange:          r.SegmentBase.IndexRange,
+				Initialization:      r.SegmentBase.Initialization,
+				InitializationRange: r.SegmentBase.InitializationRange,
+			}
+		}
+		as.Representations = append(as.Representations, rep)
 	}
 	return as
 }

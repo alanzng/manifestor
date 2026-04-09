@@ -90,6 +90,17 @@ func buildXMLAdaptation(as AdaptationSet) xmlOutAdaptation {
 		if r.MimeType != "" && r.MimeType != as.MimeType {
 			xr.MimeType = r.MimeType
 		}
+		if r.SegmentBase != nil {
+			sb := r.SegmentBase
+			xsb := &xmlOutSegmentBase{IndexRange: sb.IndexRange}
+			if sb.Initialization != "" || sb.InitializationRange != "" {
+				xsb.Initialization = &xmlOutSBInitialization{
+					SourceURL: sb.Initialization,
+					Range:     sb.InitializationRange,
+				}
+			}
+			xr.SegmentBase = xsb
+		}
 		if r.AudioChannelConfiguration != nil {
 			xr.AudioChannelConfiguration = &xmlOutAudioChannelConfiguration{
 				SchemeIDURI: r.AudioChannelConfiguration.SchemeIDURI,
@@ -170,6 +181,7 @@ type xmlOutRepresentation struct {
 	FrameRate                 string                           `xml:"frameRate,attr,omitempty"`
 	MimeType                  string                           `xml:"mimeType,attr,omitempty"`
 	BaseURL                   string                           `xml:"BaseURL,omitempty"`
+	SegmentBase               *xmlOutSegmentBase               `xml:"SegmentBase,omitempty"`
 	AudioChannelConfiguration *xmlOutAudioChannelConfiguration `xml:"AudioChannelConfiguration,omitempty"`
 }
 

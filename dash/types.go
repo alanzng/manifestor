@@ -57,6 +57,7 @@ type Representation struct {
 	MimeType                  string
 	StartWithSAP              int
 	BaseURL                   string
+	SegmentBase               *SegmentBase
 	AudioChannelConfiguration *AudioChannelConfiguration
 }
 
@@ -95,6 +96,7 @@ type RepresentationParams struct {
 	MimeType                  string
 	StartWithSAP              int
 	BaseURL                   string
+	SegmentBase               *SegmentBaseParams
 	AudioChannelConfiguration *AudioChannelConfiguration
 }
 
@@ -109,8 +111,9 @@ type SegmentTemplateParams struct {
 
 // SegmentBaseParams holds parameters for a SegmentBase.
 type SegmentBaseParams struct {
-	IndexRange     string
-	Initialization string
+	IndexRange          string
+	Initialization      string
+	InitializationRange string
 }
 
 // AdaptationSetParams holds parameters for an AdaptationSet in the builder.

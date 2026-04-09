@@ -58,6 +58,7 @@ type xmlRepresentation struct {
 	MimeType                  string                        `xml:"mimeType,attr"`
 	StartWithSAP              string                        `xml:"startWithSAP,attr"`
 	BaseURL                   string                        `xml:"BaseURL"`
+	SegmentBase               *xmlSegmentBase               `xml:"SegmentBase"`
 	AudioChannelConfiguration *xmlAudioChannelConfiguration `xml:"AudioChannelConfiguration"`
 }
 
@@ -160,6 +161,9 @@ func convertRepresentation(xr xmlRepresentation) Representation {
 		MimeType:     xr.MimeType,
 		StartWithSAP: atoi(xr.StartWithSAP),
 		BaseURL:      xr.BaseURL,
+	}
+	if xr.SegmentBase != nil {
+		r.SegmentBase = convertSegmentBase(xr.SegmentBase)
 	}
 	if xr.AudioChannelConfiguration != nil {
 		r.AudioChannelConfiguration = &AudioChannelConfiguration{
