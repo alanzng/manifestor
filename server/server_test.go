@@ -87,6 +87,35 @@ func TestHandleFilterSuccess(t *testing.T) {
 	}
 }
 
+func TestHandleFilterDerivesOriginFromUpstreamURLWhenMissing(t *testing.T) {
+	upstream := mockUpstream(sampleHLS)
+	defer upstream.Close()
+
+	srv := newTestServer()
+	defer srv.Close()
+
+	resp, err := ctxGet(t, srv.URL+"/filter?url="+upstream.URL+"/nested/path/playlist.m3u8")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := string(bodyBytes)
+	if !strings.Contains(body, upstream.URL+"/nested/path/video-720p.m3u8") {
+		t.Errorf("expected absolute URI with derived origin, got:\n%s", body)
+	}
+	if !strings.Contains(body, upstream.URL+"/nested/path/video-480p.m3u8") {
+		t.Errorf("expected absolute URI with derived origin, got:\n%s", body)
+	}
+}
+
 func TestHandleFilterCodecH264(t *testing.T) {
 	// HLS with mixed codecs.
 	mixed := `#EXTM3U
