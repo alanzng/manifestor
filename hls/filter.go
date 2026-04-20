@@ -210,7 +210,7 @@ func applyTransformers(v *Variant, cfg *filterConfig) {
 // rewriteURI applies the active URI transformers to a single URI string.
 // It parses the URI only once for efficiency.
 func rewriteURI(uri string, cfg *filterConfig) string {
-	if cfg.absoluteOrigin == "" && cfg.cdnBaseURL == "" && cfg.authToken == "" {
+	if cfg.absoluteOrigin == "" && cfg.cdnBaseURL == "" && cfg.authToken == "" && cfg.uriSigner == nil {
 		return uri
 	}
 	u, err := url.Parse(uri)
@@ -239,5 +239,9 @@ func rewriteURI(uri string, cfg *filterConfig) string {
 		q.Set("token", cfg.authToken)
 		u.RawQuery = q.Encode()
 	}
-	return u.String()
+	result := u.String()
+	if cfg.uriSigner != nil && u.IsAbs() {
+		result = cfg.uriSigner(result)
+	}
+	return result
 }

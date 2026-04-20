@@ -2,6 +2,7 @@ package hls
 
 import (
 	"errors"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -723,5 +724,62 @@ func TestFilter_AbsoluteURIs_RewritesInjectedAudioAndSubtitle(t *testing.T) {
 	}
 	if !strings.Contains(out, `URI="https://s3.example.com/bucket/subs/vi.m3u8"`) {
 		t.Fatalf("injected subtitle URI not rewritten: %s", out)
+	}
+}
+
+func TestFilter_WithURISigner_HLS(t *testing.T) {
+	in := `#EXTM3U
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="a",NAME="vi",LANGUAGE="vi",URI="audio/vi.m3u8"
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="s",NAME="vi",LANGUAGE="vi",URI="subs/vi.m3u8"
+#EXT-X-I-FRAME-STREAM-INF:BANDWIDTH=200000,RESOLUTION=640x360,URI="iframe/360p.m3u8"
+#EXT-X-STREAM-INF:BANDWIDTH=1000,RESOLUTION=640x360,AUDIO="a",SUBTITLES="s"
+360p.m3u8
+`
+	signer := func(abs string) string {
+		u, err := url.Parse(abs)
+		if err != nil || u.Host != "s3.example.com" {
+			return abs
+		}
+		return "https://cdn.example.com/tok" + u.Path
+	}
+	out, err := Filter(in,
+		WithAbsoluteURIs("https://s3.example.com/bucket/"),
+		WithURISigner(signer),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"https://cdn.example.com/tok/bucket/360p.m3u8",
+		"https://cdn.example.com/tok/bucket/audio/vi.m3u8",
+		"https://cdn.example.com/tok/bucket/subs/vi.m3u8",
+		"https://cdn.example.com/tok/bucket/iframe/360p.m3u8",
+	}
+	for _, w := range want {
+		if !strings.Contains(out, w) {
+			t.Fatalf("missing signed URI %q in output:\n%s", w, out)
+		}
+	}
+	if strings.Contains(out, "s3.example.com") {
+		t.Fatalf("origin host leaked: %s", out)
+	}
+}
+
+func TestFilter_WithURISigner_LeavesRelativeUntouched(t *testing.T) {
+	in := `#EXTM3U
+#EXT-X-STREAM-INF:BANDWIDTH=1000,RESOLUTION=640x360
+360p.m3u8
+`
+	called := false
+	signer := func(abs string) string { called = true; return "SHOULD_NOT_APPEAR" }
+	out, err := Filter(in, WithURISigner(signer))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if called {
+		t.Fatalf("signer called for relative URI")
+	}
+	if !strings.Contains(out, "360p.m3u8") || strings.Contains(out, "SHOULD_NOT_APPEAR") {
+		t.Fatalf("relative URI was modified: %s", out)
 	}
 }

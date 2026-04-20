@@ -183,6 +183,8 @@ func toHLSOpts(opts []Option) []hls.Option {
 			out = append(out, hls.WithInjectSubtitle(v.params))
 		case hlsVariantSubtitleGroupOption:
 			out = append(out, hls.WithVariantSubtitleGroup(v.groupID))
+		case uriSignerOption:
+			out = append(out, hls.WithURISigner(v.fn))
 		}
 	}
 	return out
