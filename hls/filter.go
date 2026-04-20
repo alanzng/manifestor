@@ -185,6 +185,9 @@ func iframePasses(f *IFrameStream, cfg *filterConfig) bool {
 // filterAudioTracks returns the audio tracks that pass the language filter.
 // If no language filter is set, all tracks are preserved (F-13).
 func filterAudioTracks(tracks []MediaTrack, cfg *filterConfig) []MediaTrack {
+	if cfg.clearAudio {
+		return nil
+	}
 	if cfg.audioLanguage == "" {
 		return tracks
 	}

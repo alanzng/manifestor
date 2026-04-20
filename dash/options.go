@@ -27,6 +27,7 @@ type filterConfig struct {
 	customFilter    func(*Representation) bool
 	customTransform func(*Representation)
 	uriSigner       func(string) string
+	clearAudio      bool
 }
 
 // WithCodec keeps only representations whose Codecs field matches the given codec family.
@@ -111,4 +112,10 @@ func WithInjectAdaptationSet(p AdaptationSetParams) Option {
 // invoked for absolute URLs.
 func WithURISigner(fn func(string) string) Option {
 	return func(c *filterConfig) { c.uriSigner = fn }
+}
+
+// WithClearAudioTracks removes every audio AdaptationSet from each Period
+// before inject options are applied. Use to replace origin audio entirely.
+func WithClearAudioTracks() Option {
+	return func(c *filterConfig) { c.clearAudio = true }
 }

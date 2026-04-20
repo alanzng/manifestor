@@ -86,6 +86,9 @@ func Filter(content string, opts ...Option) (string, error) {
 // all active filters, or nil if no representations survive or the set is
 // excluded by the language filter.
 func filterAdaptationSet(as *AdaptationSet, cfg *filterConfig) *AdaptationSet {
+	if cfg.clearAudio && isAudioAdaptationSet(as) {
+		return nil
+	}
 	// Language filter applies only to audio AdaptationSets.
 	if cfg.audioLanguage != "" && isAudioAdaptationSet(as) {
 		if !strings.EqualFold(as.Lang, cfg.audioLanguage) {

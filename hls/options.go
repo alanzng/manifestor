@@ -30,6 +30,7 @@ type filterConfig struct {
 	customFilter      func(*Variant) bool
 	customTransform   func(*Variant)
 	uriSigner         func(string) string
+	clearAudio        bool
 }
 
 // WithCodec keeps only variants whose Codecs field matches the given codec family.
@@ -129,4 +130,10 @@ func WithVariantSubtitleGroup(groupID string) Option {
 // resolution); relative URIs pass through unchanged.
 func WithURISigner(fn func(string) string) Option {
 	return func(c *filterConfig) { c.uriSigner = fn }
+}
+
+// WithClearAudioTracks removes every parsed origin audio track before
+// inject options are applied. Use to replace origin audio entirely.
+func WithClearAudioTracks() Option {
+	return func(c *filterConfig) { c.clearAudio = true }
 }

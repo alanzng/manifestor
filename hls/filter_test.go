@@ -783,3 +783,24 @@ func TestFilter_WithURISigner_LeavesRelativeUntouched(t *testing.T) {
 		t.Fatalf("relative URI was modified: %s", out)
 	}
 }
+
+func TestFilter_ClearAudioTracks_HLS(t *testing.T) {
+	in := `#EXTM3U
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="a",NAME="orig",LANGUAGE="tg",URI="orig.m3u8"
+#EXT-X-STREAM-INF:BANDWIDTH=1000,RESOLUTION=640x360,AUDIO="a"
+360p.m3u8
+`
+	out, err := Filter(in,
+		WithClearAudioTracks(),
+		WithInjectAudioTrack(AudioTrackParams{GroupID: "a", Name: "new", Language: "tg", URI: "new.m3u8"}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out, "orig.m3u8") || strings.Contains(out, `NAME="orig"`) {
+		t.Fatalf("origin audio not stripped: %s", out)
+	}
+	if !strings.Contains(out, "new.m3u8") {
+		t.Fatalf("injected audio missing: %s", out)
+	}
+}
