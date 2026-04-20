@@ -63,9 +63,19 @@ func Filter(content string, opts ...Option) (string, error) {
 		audioTracks[i].URI = rewriteURI(audioTracks[i].URI, cfg)
 	}
 
-	// Inject additional variants, audio tracks, and subtitles.
+	// Copy subtitles and rewrite their URIs (parity with audio tracks).
+	subtitles := make([]MediaTrack, len(p.Subtitles))
+	copy(subtitles, p.Subtitles)
+	for i := range subtitles {
+		subtitles[i].URI = rewriteURI(subtitles[i].URI, cfg)
+	}
+
+	// Inject additional variants, audio tracks, and subtitles. Injected URIs
+	// flow through rewriteURI so absolute-URI / signer transforms apply uniformly.
 	for _, vp := range cfg.injectVariants {
-		filtered = append(filtered, Variant(vp))
+		v := Variant(vp)
+		v.URI = rewriteURI(v.URI, cfg)
+		filtered = append(filtered, v)
 	}
 	for _, ap := range cfg.injectAudioTracks {
 		audioTracks = append(audioTracks, MediaTrack{
@@ -73,20 +83,19 @@ func Filter(content string, opts ...Option) (string, error) {
 			GroupID:    ap.GroupID,
 			Name:       ap.Name,
 			Language:   ap.Language,
-			URI:        ap.URI,
+			URI:        rewriteURI(ap.URI, cfg),
 			Default:    ap.Default,
 			AutoSelect: ap.AutoSelect,
 			Forced:     ap.Forced,
 		})
 	}
-	subtitles := p.Subtitles
 	for _, sp := range cfg.injectSubtitles {
 		subtitles = append(subtitles, MediaTrack{
 			Type:     "SUBTITLES",
 			GroupID:  sp.GroupID,
 			Name:     sp.Name,
 			Language: sp.Language,
-			URI:      sp.URI,
+			URI:      rewriteURI(sp.URI, cfg),
 			Default:  sp.Default,
 			Forced:   sp.Forced,
 		})

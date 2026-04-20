@@ -689,3 +689,39 @@ func TestIFramePasses_ExactWidthMismatch(t *testing.T) {
 		t.Error("expected iframe to be filtered by exactWidth mismatch")
 	}
 }
+
+func TestFilter_AbsoluteURIs_RewritesSubtitleURIs(t *testing.T) {
+	in := `#EXTM3U
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="vi",LANGUAGE="vi",URI="subs/vi.m3u8"
+#EXT-X-STREAM-INF:BANDWIDTH=1000,RESOLUTION=640x360,SUBTITLES="subs"
+360p.m3u8
+`
+	out, err := Filter(in, WithAbsoluteURIs("https://s3.example.com/bucket/"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, `URI="https://s3.example.com/bucket/subs/vi.m3u8"`) {
+		t.Fatalf("subtitle URI not rewritten to absolute: %s", out)
+	}
+}
+
+func TestFilter_AbsoluteURIs_RewritesInjectedAudioAndSubtitle(t *testing.T) {
+	in := `#EXTM3U
+#EXT-X-STREAM-INF:BANDWIDTH=1000,RESOLUTION=640x360
+360p.m3u8
+`
+	out, err := Filter(in,
+		WithAbsoluteURIs("https://s3.example.com/bucket/"),
+		WithInjectAudioTrack(AudioTrackParams{GroupID: "a", Name: "vi", Language: "vi", URI: "audio/vi.m3u8"}),
+		WithInjectSubtitle(SubtitleTrackParams{GroupID: "s", Name: "vi", Language: "vi", URI: "subs/vi.m3u8"}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, `URI="https://s3.example.com/bucket/audio/vi.m3u8"`) {
+		t.Fatalf("injected audio URI not rewritten: %s", out)
+	}
+	if !strings.Contains(out, `URI="https://s3.example.com/bucket/subs/vi.m3u8"`) {
+		t.Fatalf("injected subtitle URI not rewritten: %s", out)
+	}
+}
