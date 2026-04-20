@@ -224,6 +224,8 @@ func toDASHOpts(opts []Option) []dash.Option {
 			out = append(out, dash.WithAuthToken(v.token))
 		case dashInjectAdaptationSetOption:
 			out = append(out, dash.WithInjectAdaptationSet(v.params))
+		case uriSignerOption:
+			out = append(out, dash.WithURISigner(v.fn))
 		}
 	}
 	return out

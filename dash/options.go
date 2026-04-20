@@ -26,6 +26,7 @@ type filterConfig struct {
 	injectSets      []AdaptationSetParams
 	customFilter    func(*Representation) bool
 	customTransform func(*Representation)
+	uriSigner       func(string) string
 }
 
 // WithCodec keeps only representations whose Codecs field matches the given codec family.
@@ -103,4 +104,11 @@ func WithCustomTransformer(fn func(*Representation)) Option {
 // after filtering. Useful for injecting subtitle or secondary audio tracks.
 func WithInjectAdaptationSet(p AdaptationSetParams) Option {
 	return func(c *filterConfig) { c.injectSets = append(c.injectSets, p) }
+}
+
+// WithURISigner applies fn to every absolute Representation BaseURL emitted
+// by Filter, including BaseURLs in injected AdaptationSets. fn is only
+// invoked for absolute URLs.
+func WithURISigner(fn func(string) string) Option {
+	return func(c *filterConfig) { c.uriSigner = fn }
 }
