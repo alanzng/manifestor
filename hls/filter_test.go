@@ -2,6 +2,7 @@ package hls
 
 import (
 	"errors"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -687,5 +688,119 @@ func TestIFramePasses_ExactWidthMismatch(t *testing.T) {
 	cfg := &filterConfig{exactWidth: 1280, exactHeight: 720}
 	if iframePasses(f, cfg) {
 		t.Error("expected iframe to be filtered by exactWidth mismatch")
+	}
+}
+
+func TestFilter_AbsoluteURIs_RewritesSubtitleURIs(t *testing.T) {
+	in := `#EXTM3U
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="vi",LANGUAGE="vi",URI="subs/vi.m3u8"
+#EXT-X-STREAM-INF:BANDWIDTH=1000,RESOLUTION=640x360,SUBTITLES="subs"
+360p.m3u8
+`
+	out, err := Filter(in, WithAbsoluteURIs("https://s3.example.com/bucket/"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, `URI="https://s3.example.com/bucket/subs/vi.m3u8"`) {
+		t.Fatalf("subtitle URI not rewritten to absolute: %s", out)
+	}
+}
+
+func TestFilter_AbsoluteURIs_RewritesInjectedAudioAndSubtitle(t *testing.T) {
+	in := `#EXTM3U
+#EXT-X-STREAM-INF:BANDWIDTH=1000,RESOLUTION=640x360
+360p.m3u8
+`
+	out, err := Filter(in,
+		WithAbsoluteURIs("https://s3.example.com/bucket/"),
+		WithInjectAudioTrack(AudioTrackParams{GroupID: "a", Name: "vi", Language: "vi", URI: "audio/vi.m3u8"}),
+		WithInjectSubtitle(SubtitleTrackParams{GroupID: "s", Name: "vi", Language: "vi", URI: "subs/vi.m3u8"}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, `URI="https://s3.example.com/bucket/audio/vi.m3u8"`) {
+		t.Fatalf("injected audio URI not rewritten: %s", out)
+	}
+	if !strings.Contains(out, `URI="https://s3.example.com/bucket/subs/vi.m3u8"`) {
+		t.Fatalf("injected subtitle URI not rewritten: %s", out)
+	}
+}
+
+func TestFilter_WithURISigner_HLS(t *testing.T) {
+	in := `#EXTM3U
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="a",NAME="vi",LANGUAGE="vi",URI="audio/vi.m3u8"
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="s",NAME="vi",LANGUAGE="vi",URI="subs/vi.m3u8"
+#EXT-X-I-FRAME-STREAM-INF:BANDWIDTH=200000,RESOLUTION=640x360,URI="iframe/360p.m3u8"
+#EXT-X-STREAM-INF:BANDWIDTH=1000,RESOLUTION=640x360,AUDIO="a",SUBTITLES="s"
+360p.m3u8
+`
+	signer := func(abs string) string {
+		u, err := url.Parse(abs)
+		if err != nil || u.Host != "s3.example.com" {
+			return abs
+		}
+		return "https://cdn.example.com/tok" + u.Path
+	}
+	out, err := Filter(in,
+		WithAbsoluteURIs("https://s3.example.com/bucket/"),
+		WithURISigner(signer),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"https://cdn.example.com/tok/bucket/360p.m3u8",
+		"https://cdn.example.com/tok/bucket/audio/vi.m3u8",
+		"https://cdn.example.com/tok/bucket/subs/vi.m3u8",
+		"https://cdn.example.com/tok/bucket/iframe/360p.m3u8",
+	}
+	for _, w := range want {
+		if !strings.Contains(out, w) {
+			t.Fatalf("missing signed URI %q in output:\n%s", w, out)
+		}
+	}
+	if strings.Contains(out, "s3.example.com") {
+		t.Fatalf("origin host leaked: %s", out)
+	}
+}
+
+func TestFilter_WithURISigner_LeavesRelativeUntouched(t *testing.T) {
+	in := `#EXTM3U
+#EXT-X-STREAM-INF:BANDWIDTH=1000,RESOLUTION=640x360
+360p.m3u8
+`
+	called := false
+	signer := func(abs string) string { called = true; return "SHOULD_NOT_APPEAR" }
+	out, err := Filter(in, WithURISigner(signer))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if called {
+		t.Fatalf("signer called for relative URI")
+	}
+	if !strings.Contains(out, "360p.m3u8") || strings.Contains(out, "SHOULD_NOT_APPEAR") {
+		t.Fatalf("relative URI was modified: %s", out)
+	}
+}
+
+func TestFilter_ClearAudioTracks_HLS(t *testing.T) {
+	in := `#EXTM3U
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="a",NAME="orig",LANGUAGE="tg",URI="orig.m3u8"
+#EXT-X-STREAM-INF:BANDWIDTH=1000,RESOLUTION=640x360,AUDIO="a"
+360p.m3u8
+`
+	out, err := Filter(in,
+		WithClearAudioTracks(),
+		WithInjectAudioTrack(AudioTrackParams{GroupID: "a", Name: "new", Language: "tg", URI: "new.m3u8"}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out, "orig.m3u8") || strings.Contains(out, `NAME="orig"`) {
+		t.Fatalf("origin audio not stripped: %s", out)
+	}
+	if !strings.Contains(out, "new.m3u8") {
+		t.Fatalf("injected audio missing: %s", out)
 	}
 }

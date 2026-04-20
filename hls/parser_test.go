@@ -544,3 +544,18 @@ func TestParseResolution(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkParse_VieonVOD(b *testing.B) {
+	data, err := os.ReadFile("../testdata/hls/vieon_vod.m3u8")
+	if err != nil {
+		b.Skipf("testdata missing: %v", err)
+	}
+	content := string(data)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := Parse(content); err != nil {
+			b.Fatal(err)
+		}
+	}
+}

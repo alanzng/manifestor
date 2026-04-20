@@ -270,8 +270,19 @@ manifestor build --format hls --variants spec.json --output master.m3u8
 | `WithCDNBaseURL(base)` | Rewrite all URIs to use `base` as CDN origin |
 | `WithAbsoluteURIs(origin)` | Resolve relative URIs to absolute using `origin` |
 | `WithAuthToken(token)` | Append `token=` query parameter to all URIs |
+| `WithURISigner(fn)` | Per-URI signing hook. `fn(absoluteURL string) string` is invoked for every absolute URI emitted by `Filter` and may return a rewritten replacement. Use when a signing scheme requires per-URL token computation that `WithAuthToken` cannot express. |
+| `WithClearAudioTracks()` | Remove every parsed origin audio track (HLS) or audio AdaptationSet (DASH) before inject options run. Pair with `WithHLSInjectAudioTrack` / `WithDASHInjectAdaptationSet` to fully replace origin audio. |
 
-URI rewriting covers: HLS variant URIs, audio track URIs, I-frame stream URIs; DASH `<BaseURL>` elements.
+URI rewriting covers: HLS variant URIs, audio track URIs, subtitle track URIs, I-frame stream URIs (including injected ones); DASH `<BaseURL>` elements (including injected ones).
+
+```go
+out, err := manifest.Filter(content,
+    manifest.WithAbsoluteURIs("https://origin.example.com/bucket/"),
+    manifest.WithURISigner(func(u string) string {
+        return signWithCloudFront(u, keyPair)
+    }),
+)
+```
 
 ### HLS-only filter options
 

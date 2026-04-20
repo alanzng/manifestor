@@ -676,3 +676,131 @@ func TestFilter_DASH_MimeInheritedFromAdaptationSet(t *testing.T) {
 		t.Errorf("expected audio AdaptationSet to survive")
 	}
 }
+
+func TestFilter_WithURISigner_DASH(t *testing.T) {
+	in := `<?xml version="1.0"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" type="static" mediaPresentationDuration="PT60S" minBufferTime="PT2S">
+ <Period>
+  <AdaptationSet mimeType="video/mp4" contentType="video">
+   <Representation id="r1" bandwidth="1000000" width="640" height="360" codecs="avc1.42001e">
+    <BaseURL>h264/360p/</BaseURL>
+   </Representation>
+  </AdaptationSet>
+ </Period>
+</MPD>`
+	signer := func(abs string) string {
+		if strings.HasPrefix(abs, "https://s3.example.com/") {
+			return "https://cdn.example.com/tok" + strings.TrimPrefix(abs, "https://s3.example.com")
+		}
+		return abs
+	}
+	out, err := Filter(in,
+		WithAbsoluteURIs("https://s3.example.com/bucket/"),
+		WithURISigner(signer),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "https://cdn.example.com/tok/bucket/h264/360p/") {
+		t.Fatalf("BaseURL not signed: %s", out)
+	}
+	if strings.Contains(out, "s3.example.com") {
+		t.Fatalf("origin host leaked: %s", out)
+	}
+}
+
+func TestFilter_WithURISigner_DASH_InjectedSet(t *testing.T) {
+	in := `<?xml version="1.0"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" type="static" mediaPresentationDuration="PT60S" minBufferTime="PT2S">
+ <Period>
+  <AdaptationSet mimeType="video/mp4" contentType="video">
+   <Representation id="r1" bandwidth="1000000" width="640" height="360" codecs="avc1.42001e">
+    <BaseURL>https://s3.example.com/bucket/h264/360p/</BaseURL>
+   </Representation>
+  </AdaptationSet>
+ </Period>
+</MPD>`
+	signer := func(abs string) string { return abs + "?sig=x" }
+	out, err := Filter(in,
+		WithURISigner(signer),
+		WithInjectAdaptationSet(AdaptationSetParams{
+			MimeType: "audio/mp4", Lang: "vi",
+			Representations: []RepresentationParams{
+				{ID: "a1", Bandwidth: 64000, BaseURL: "https://s3.example.com/bucket/audio/vi/"},
+			},
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "https://s3.example.com/bucket/h264/360p/?sig=x") {
+		t.Fatalf("origin BaseURL not signed: %s", out)
+	}
+	if !strings.Contains(out, "https://s3.example.com/bucket/audio/vi/?sig=x") {
+		t.Fatalf("injected BaseURL not signed: %s", out)
+	}
+}
+
+func TestFilter_ClearAudioTracks_DASH(t *testing.T) {
+	in := `<?xml version="1.0"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" type="static" mediaPresentationDuration="PT60S" minBufferTime="PT2S">
+ <Period>
+  <AdaptationSet mimeType="video/mp4" contentType="video">
+   <Representation id="v1" bandwidth="1000000" width="640" height="360" codecs="avc1.42001e">
+    <BaseURL>video/360p/</BaseURL>
+   </Representation>
+  </AdaptationSet>
+  <AdaptationSet mimeType="audio/mp4" contentType="audio" lang="tg">
+   <Representation id="a1" bandwidth="64000">
+    <BaseURL>audio/orig/</BaseURL>
+   </Representation>
+  </AdaptationSet>
+ </Period>
+</MPD>`
+	out, err := Filter(in, WithClearAudioTracks())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out, "audio/orig/") || strings.Contains(out, `lang="tg"`) {
+		t.Fatalf("origin audio AdaptationSet not stripped: %s", out)
+	}
+	if !strings.Contains(out, "video/360p/") {
+		t.Fatalf("video AdaptationSet wrongly removed: %s", out)
+	}
+}
+
+func TestFilter_ClearAudioTracks_DASH_WithInject(t *testing.T) {
+	in := `<?xml version="1.0"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" type="static" mediaPresentationDuration="PT60S" minBufferTime="PT2S">
+ <Period>
+  <AdaptationSet mimeType="video/mp4" contentType="video">
+   <Representation id="v1" bandwidth="1000000" width="640" height="360" codecs="avc1.42001e">
+    <BaseURL>video/360p/</BaseURL>
+   </Representation>
+  </AdaptationSet>
+  <AdaptationSet mimeType="audio/mp4" contentType="audio" lang="tg">
+   <Representation id="a1" bandwidth="64000">
+    <BaseURL>audio/orig/</BaseURL>
+   </Representation>
+  </AdaptationSet>
+ </Period>
+</MPD>`
+	out, err := Filter(in,
+		WithClearAudioTracks(),
+		WithInjectAdaptationSet(AdaptationSetParams{
+			MimeType: "audio/mp4", Lang: "vi",
+			Representations: []RepresentationParams{
+				{ID: "a-new", Bandwidth: 64000, BaseURL: "audio/new/"},
+			},
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out, "audio/orig/") {
+		t.Fatalf("origin audio AdaptationSet not stripped: %s", out)
+	}
+	if !strings.Contains(out, "audio/new/") {
+		t.Fatalf("injected audio AdaptationSet missing: %s", out)
+	}
+}

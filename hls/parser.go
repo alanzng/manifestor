@@ -88,13 +88,33 @@ func Parse(content string) (*MasterPlaylist, error) {
 	return p, nil
 }
 
-// splitLines splits content on newlines and trims carriage returns (CRLF support).
+// splitLines splits content on '\n' and strips a trailing '\r' per line
+// (CRLF support). It allocates the output slice exactly once.
 func splitLines(content string) []string {
-	raw := strings.Split(content, "\n")
-	out := make([]string, len(raw))
-	for i, l := range raw {
-		out[i] = strings.TrimRight(l, "\r")
+	n := 1
+	for i := 0; i < len(content); i++ {
+		if content[i] == '\n' {
+			n++
+		}
 	}
+	out := make([]string, 0, n)
+	start := 0
+	for i := 0; i < len(content); i++ {
+		if content[i] != '\n' {
+			continue
+		}
+		end := i
+		if end > start && content[end-1] == '\r' {
+			end--
+		}
+		out = append(out, content[start:end])
+		start = i + 1
+	}
+	end := len(content)
+	if end > start && content[end-1] == '\r' {
+		end--
+	}
+	out = append(out, content[start:end])
 	return out
 }
 

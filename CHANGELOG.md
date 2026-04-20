@@ -13,6 +13,23 @@ _No changes yet._
 
 ---
 
+## [0.7.0] - 2026-04-20
+
+### Added
+
+- **`manifest.WithURISigner(fn URISigner)`** — per-URI signing hook applied during filtering for both HLS and DASH. The signer receives an absolute URL and returns the replacement; relative URIs pass through untouched. Reaches every URI exit point: HLS variant / audio / subtitle / I-frame URIs (origin and injected) and DASH Representation `BaseURL`s (origin and injected). Useful when a CDN signing scheme requires per-URL token computation that `WithAuthToken` cannot express.
+- **`manifest.WithClearAudioTracks()`** — drops every parsed origin audio track (HLS) or audio AdaptationSet (DASH) before any inject options run. Pair with `WithHLSInjectAudioTrack` / `WithDASHInjectAdaptationSet` to fully replace origin audio with injected audio in dub-replacement flows.
+
+### Fixed
+
+- **HLS subtitle and injected media URIs** now flow through `rewriteURI`, so `WithAbsoluteURIs`, `WithCDNBaseURL`, `WithAuthToken`, and the new `WithURISigner` apply to them. Previously these URIs bypassed all transforms and appeared verbatim in the serialized output.
+
+### Performance
+
+- `hls.splitLines` rewritten as a single-pass scan that allocates the output slice exactly once. Halves parser allocations on master-playlist inputs.
+
+---
+
 ## [0.5.0] - 2026-04-09
 
 ### Changed

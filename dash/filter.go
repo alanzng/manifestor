@@ -57,7 +57,16 @@ func Filter(content string, opts ...Option) (string, error) {
 	if len(cfg.injectSets) > 0 {
 		for pi := range periods {
 			for _, sp := range cfg.injectSets {
-				periods[pi].AdaptationSets = append(periods[pi].AdaptationSets, convertAdaptationSetParams(sp))
+				as := convertAdaptationSetParams(sp)
+				if cfg.uriSigner != nil {
+					for ri := range as.Representations {
+						bu := as.Representations[ri].BaseURL
+						if u, err := url.Parse(bu); err == nil && u.IsAbs() {
+							as.Representations[ri].BaseURL = cfg.uriSigner(bu)
+						}
+					}
+				}
+				periods[pi].AdaptationSets = append(periods[pi].AdaptationSets, as)
 			}
 		}
 	}
@@ -77,6 +86,9 @@ func Filter(content string, opts ...Option) (string, error) {
 // all active filters, or nil if no representations survive or the set is
 // excluded by the language filter.
 func filterAdaptationSet(as *AdaptationSet, cfg *filterConfig) *AdaptationSet {
+	if cfg.clearAudio && isAudioAdaptationSet(as) {
+		return nil
+	}
 	// Language filter applies only to audio AdaptationSets.
 	if cfg.audioLanguage != "" && isAudioAdaptationSet(as) {
 		if !strings.EqualFold(as.Lang, cfg.audioLanguage) {
@@ -209,6 +221,11 @@ func applyTransformers(r *Representation, cfg *filterConfig) {
 				u.RawQuery = q.Encode()
 			}
 			r.BaseURL = u.String()
+		}
+	}
+	if cfg.uriSigner != nil {
+		if u, err := url.Parse(r.BaseURL); err == nil && u.IsAbs() {
+			r.BaseURL = cfg.uriSigner(r.BaseURL)
 		}
 	}
 	if cfg.customTransform != nil {

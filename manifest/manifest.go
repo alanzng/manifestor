@@ -183,6 +183,10 @@ func toHLSOpts(opts []Option) []hls.Option {
 			out = append(out, hls.WithInjectSubtitle(v.params))
 		case hlsVariantSubtitleGroupOption:
 			out = append(out, hls.WithVariantSubtitleGroup(v.groupID))
+		case uriSignerOption:
+			out = append(out, hls.WithURISigner(v.fn))
+		case clearAudioOption:
+			out = append(out, hls.WithClearAudioTracks())
 		}
 	}
 	return out
@@ -222,6 +226,10 @@ func toDASHOpts(opts []Option) []dash.Option {
 			out = append(out, dash.WithAuthToken(v.token))
 		case dashInjectAdaptationSetOption:
 			out = append(out, dash.WithInjectAdaptationSet(v.params))
+		case uriSignerOption:
+			out = append(out, dash.WithURISigner(v.fn))
+		case clearAudioOption:
+			out = append(out, dash.WithClearAudioTracks())
 		}
 	}
 	return out

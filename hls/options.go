@@ -29,6 +29,8 @@ type filterConfig struct {
 	subtitleGroupID   string
 	customFilter      func(*Variant) bool
 	customTransform   func(*Variant)
+	uriSigner         func(string) string
+	clearAudio        bool
 }
 
 // WithCodec keeps only variants whose Codecs field matches the given codec family.
@@ -121,4 +123,17 @@ func WithInjectSubtitle(p SubtitleTrackParams) Option {
 // Use this together with WithInjectSubtitle to wire variants to a subtitle group.
 func WithVariantSubtitleGroup(groupID string) Option {
 	return func(c *filterConfig) { c.subtitleGroupID = groupID }
+}
+
+// WithURISigner applies fn to every absolute URI emitted by Filter.
+// fn is invoked only when the URI is absolute (after any WithAbsoluteURIs
+// resolution); relative URIs pass through unchanged.
+func WithURISigner(fn func(string) string) Option {
+	return func(c *filterConfig) { c.uriSigner = fn }
+}
+
+// WithClearAudioTracks removes every parsed origin audio track before
+// inject options are applied. Use to replace origin audio entirely.
+func WithClearAudioTracks() Option {
+	return func(c *filterConfig) { c.clearAudio = true }
 }

@@ -63,9 +63,19 @@ func Filter(content string, opts ...Option) (string, error) {
 		audioTracks[i].URI = rewriteURI(audioTracks[i].URI, cfg)
 	}
 
-	// Inject additional variants, audio tracks, and subtitles.
+	// Copy subtitles and rewrite their URIs (parity with audio tracks).
+	subtitles := make([]MediaTrack, len(p.Subtitles))
+	copy(subtitles, p.Subtitles)
+	for i := range subtitles {
+		subtitles[i].URI = rewriteURI(subtitles[i].URI, cfg)
+	}
+
+	// Inject additional variants, audio tracks, and subtitles. Injected URIs
+	// flow through rewriteURI so absolute-URI / signer transforms apply uniformly.
 	for _, vp := range cfg.injectVariants {
-		filtered = append(filtered, Variant(vp))
+		v := Variant(vp)
+		v.URI = rewriteURI(v.URI, cfg)
+		filtered = append(filtered, v)
 	}
 	for _, ap := range cfg.injectAudioTracks {
 		audioTracks = append(audioTracks, MediaTrack{
@@ -73,20 +83,19 @@ func Filter(content string, opts ...Option) (string, error) {
 			GroupID:    ap.GroupID,
 			Name:       ap.Name,
 			Language:   ap.Language,
-			URI:        ap.URI,
+			URI:        rewriteURI(ap.URI, cfg),
 			Default:    ap.Default,
 			AutoSelect: ap.AutoSelect,
 			Forced:     ap.Forced,
 		})
 	}
-	subtitles := p.Subtitles
 	for _, sp := range cfg.injectSubtitles {
 		subtitles = append(subtitles, MediaTrack{
 			Type:     "SUBTITLES",
 			GroupID:  sp.GroupID,
 			Name:     sp.Name,
 			Language: sp.Language,
-			URI:      sp.URI,
+			URI:      rewriteURI(sp.URI, cfg),
 			Default:  sp.Default,
 			Forced:   sp.Forced,
 		})
@@ -176,6 +185,9 @@ func iframePasses(f *IFrameStream, cfg *filterConfig) bool {
 // filterAudioTracks returns the audio tracks that pass the language filter.
 // If no language filter is set, all tracks are preserved (F-13).
 func filterAudioTracks(tracks []MediaTrack, cfg *filterConfig) []MediaTrack {
+	if cfg.clearAudio {
+		return nil
+	}
 	if cfg.audioLanguage == "" {
 		return tracks
 	}
@@ -201,7 +213,7 @@ func applyTransformers(v *Variant, cfg *filterConfig) {
 // rewriteURI applies the active URI transformers to a single URI string.
 // It parses the URI only once for efficiency.
 func rewriteURI(uri string, cfg *filterConfig) string {
-	if cfg.absoluteOrigin == "" && cfg.cdnBaseURL == "" && cfg.authToken == "" {
+	if cfg.absoluteOrigin == "" && cfg.cdnBaseURL == "" && cfg.authToken == "" && cfg.uriSigner == nil {
 		return uri
 	}
 	u, err := url.Parse(uri)
@@ -230,5 +242,9 @@ func rewriteURI(uri string, cfg *filterConfig) string {
 		q.Set("token", cfg.authToken)
 		u.RawQuery = q.Encode()
 	}
-	return u.String()
+	result := u.String()
+	if cfg.uriSigner != nil && u.IsAbs() {
+		result = cfg.uriSigner(result)
+	}
+	return result
 }
