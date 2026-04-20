@@ -738,3 +738,30 @@ func TestFilterFromURL_ReadBodyFailed(t *testing.T) {
 	}
 	// Either ErrFetchFailed (read body) or ErrInvalidFormat is acceptable.
 }
+
+func TestFilter_URISigner_AndClearAudio_HLS(t *testing.T) {
+	in := `#EXTM3U
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="a",NAME="orig",LANGUAGE="tg",URI="orig.m3u8"
+#EXT-X-STREAM-INF:BANDWIDTH=1000,RESOLUTION=640x360,AUDIO="a"
+360p.m3u8
+`
+	signer := func(abs string) string { return abs + "?sig=x" }
+	out, err := Filter(in,
+		WithAbsoluteURIs("https://s3.example.com/bucket/"),
+		WithURISigner(signer),
+		WithClearAudioTracks(),
+		WithHLSInjectAudioTrack(hls.AudioTrackParams{GroupID: "a", Name: "new", Language: "tg", URI: "audio/new.m3u8"}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out, "orig.m3u8") {
+		t.Fatalf("origin audio not cleared: %s", out)
+	}
+	if !strings.Contains(out, "https://s3.example.com/bucket/audio/new.m3u8?sig=x") {
+		t.Fatalf("injected audio not signed: %s", out)
+	}
+	if !strings.Contains(out, "https://s3.example.com/bucket/360p.m3u8?sig=x") {
+		t.Fatalf("variant URI not signed: %s", out)
+	}
+}
