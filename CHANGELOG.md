@@ -9,7 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_No changes yet._
+### Changed
+
+- **HLS `Serialize` output** now includes Bento4-style section-header comments (`# Media Playlists`, `# Subtitles`, `# Audio`, `# Video`, `# I-Frame Playlists`) for readable, debug-friendly output. Empty sections (and their separators) are skipped. Per RFC 8216 §4, plain `#` comments are ignored by compliant HLS clients, so this is a safe, non-breaking change.
 
 ---
 
