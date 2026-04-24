@@ -765,3 +765,60 @@ func TestFilter_URISigner_AndClearAudio_HLS(t *testing.T) {
 		t.Fatalf("variant URI not signed: %s", out)
 	}
 }
+
+// ---- WithAudioLabelByLanguage (unified) ----
+
+func TestFilter_Unified_AudioLabelByLanguage_HLS(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_master.m3u8")
+	out, err := Filter(content, WithAudioLabelByLanguage(map[string]string{
+		"en": "Tiếng Anh",
+	}))
+	if err != nil {
+		t.Fatalf("Filter: %v", err)
+	}
+	p, err := hls.Parse(out)
+	if err != nil {
+		t.Fatalf("re-parse: %v", err)
+	}
+	found := false
+	for _, at := range p.AudioTracks {
+		if strings.EqualFold(at.Language, "en") {
+			found = true
+			if at.Name != "Tiếng Anh" {
+				t.Errorf("audio[lang=en].Name = %q, want %q", at.Name, "Tiếng Anh")
+			}
+		}
+	}
+	if !found {
+		t.Fatal("HLS fixture expected to contain LANGUAGE=\"en\"")
+	}
+}
+
+func TestFilter_Unified_AudioLabelByLanguage_DASH(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	out, err := Filter(content, WithAudioLabelByLanguage(map[string]string{
+		"tg": "Tiếng gốc",
+	}))
+	if err != nil {
+		t.Fatalf("Filter: %v", err)
+	}
+	m, err := dash.Parse(out)
+	if err != nil {
+		t.Fatalf("re-parse: %v", err)
+	}
+	found := false
+	for _, pd := range m.Periods {
+		for _, as := range pd.AdaptationSets {
+			if strings.EqualFold(as.Lang, "tg") &&
+				strings.HasPrefix(strings.ToLower(as.MimeType), "audio/") {
+				found = true
+				if as.Name != "Tiếng gốc" {
+					t.Errorf("audio[lang=tg].Name = %q, want %q", as.Name, "Tiếng gốc")
+				}
+			}
+		}
+	}
+	if !found {
+		t.Fatal("DASH fixture expected to contain audio AdaptationSet with lang=\"tg\"")
+	}
+}
