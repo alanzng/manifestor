@@ -804,3 +804,100 @@ func TestFilter_ClearAudioTracks_DASH_WithInject(t *testing.T) {
 		t.Fatalf("injected audio AdaptationSet missing: %s", out)
 	}
 }
+
+// ---- WithAudioLabelByLanguage ----
+
+func TestFilter_DASH_AudioLabelByLanguage_RewritesMatchingAdaptationSets(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	out, err := Filter(content, WithAudioLabelByLanguage(map[string]string{
+		"tg": "Tiếng gốc",
+	}))
+	if err != nil {
+		t.Fatalf("Filter: %v", err)
+	}
+	m, err := Parse(out)
+	if err != nil {
+		t.Fatalf("re-parse: %v", err)
+	}
+
+	found := false
+	for _, p := range m.Periods {
+		for _, as := range p.AdaptationSets {
+			if strings.EqualFold(as.Lang, "tg") && isAudioAdaptationSet(&as) {
+				found = true
+				if as.Name != "Tiếng gốc" {
+					t.Errorf("audio[lang=tg].Name = %q, want %q", as.Name, "Tiếng gốc")
+				}
+			}
+		}
+	}
+	if !found {
+		t.Fatal("fixture is expected to contain an audio AdaptationSet with lang=\"tg\"")
+	}
+}
+
+func TestFilter_DASH_AudioLabelByLanguage_IsCaseInsensitive(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/dash/bento4_mixed_codecs.mpd")
+	out, err := Filter(content, WithAudioLabelByLanguage(map[string]string{
+		"TG": "UPPER",
+	}))
+	if err != nil {
+		t.Fatalf("Filter: %v", err)
+	}
+	m, _ := Parse(out)
+	for _, p := range m.Periods {
+		for _, as := range p.AdaptationSets {
+			if strings.EqualFold(as.Lang, "tg") && isAudioAdaptationSet(&as) && as.Name != "UPPER" {
+				t.Errorf("audio[lang=tg].Name = %q, want %q", as.Name, "UPPER")
+			}
+		}
+	}
+}
+
+func TestFilter_DASH_AudioLabelByLanguage_LeavesNonAudioUntouched(t *testing.T) {
+	// Synthetic MPD with a video AdaptationSet carrying a lang attribute
+	// that matches the override map. Video sets must NOT be renamed.
+	content := `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static" mediaPresentationDuration="PT1M">
+  <Period>
+    <AdaptationSet id="0" contentType="video" mimeType="video/mp4" lang="tg" label="OriginalVideoName">
+      <Representation id="v0" bandwidth="1000000" codecs="avc1.4D401E" width="640" height="360"><BaseURL>v.mp4</BaseURL></Representation>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	out, err := Filter(content, WithAudioLabelByLanguage(map[string]string{
+		"tg": "Should Not Apply",
+	}))
+	if err != nil {
+		t.Fatalf("Filter: %v", err)
+	}
+	m, _ := Parse(out)
+	if got := m.Periods[0].AdaptationSets[0].Name; got != "OriginalVideoName" {
+		t.Errorf("video AdaptationSet.Name = %q, want %q (override must not apply to video)",
+			got, "OriginalVideoName")
+	}
+}
+
+func TestFilter_DASH_AudioLabelByLanguage_EmptyOverrideKeepsOriginal(t *testing.T) {
+	// Synthetic MPD with an audio AdaptationSet that has a pre-existing label.
+	// An empty-string override value must NOT blank it.
+	content := `<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static" mediaPresentationDuration="PT1M">
+  <Period>
+    <AdaptationSet id="0" contentType="audio" mimeType="audio/mp4" lang="en" label="OriginalAudioName">
+      <Representation id="a0" bandwidth="128000" codecs="mp4a.40.2"><BaseURL>a.mp4</BaseURL></Representation>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	out, err := Filter(content, WithAudioLabelByLanguage(map[string]string{
+		"en": "",
+	}))
+	if err != nil {
+		t.Fatalf("Filter: %v", err)
+	}
+	m, _ := Parse(out)
+	if got := m.Periods[0].AdaptationSets[0].Name; got != "OriginalAudioName" {
+		t.Errorf("audio.Name = %q, want %q (empty override must be ignored)",
+			got, "OriginalAudioName")
+	}
+}
