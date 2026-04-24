@@ -9,6 +9,12 @@ import (
 // Serialize serializes a MasterPlaylist back to a valid HLS m3u8 string.
 // The output preserves version, media tracks, variants, I-frame streams, and
 // any unrecognized lines stored in Raw (requirement P-05).
+//
+// Output includes Bento4-style section-header comments ("# Subtitles",
+// "# Audio", "# Video", "# I-Frame Playlists") for human readability.
+// Empty sections (and their separators) are skipped. Per RFC 8216 §4,
+// lines starting with '#' that are not tags are comments and MUST be
+// ignored by clients, so these headers are safe.
 func Serialize(p *MasterPlaylist) (string, error) {
 	var sb strings.Builder
 
@@ -18,22 +24,48 @@ func Serialize(p *MasterPlaylist) (string, error) {
 		fmt.Fprintf(&sb, "#EXT-X-VERSION:%d\n", p.Version)
 	}
 
-	// Media tracks: AUDIO first, then SUBTITLES / CLOSED-CAPTIONS.
-	for _, t := range p.AudioTracks {
-		writeMediaTrack(&sb, t)
-	}
-	for _, t := range p.Subtitles {
-		writeMediaTrack(&sb, t)
+	sb.WriteString("# Media Playlists\n")
+
+	// Track whether any section has been written so we can insert a
+	// blank-line separator before every section AFTER the first.
+	sectionWritten := false
+	writeSeparator := func() {
+		if sectionWritten {
+			sb.WriteByte('\n')
+		}
+		sectionWritten = true
 	}
 
-	// Variants.
-	for _, v := range p.Variants {
-		writeVariant(&sb, v)
+	if len(p.Subtitles) > 0 {
+		writeSeparator()
+		sb.WriteString("# Subtitles\n")
+		for _, t := range p.Subtitles {
+			writeMediaTrack(&sb, t)
+		}
 	}
 
-	// I-frame streams.
-	for _, f := range p.IFrames {
-		writeIFrameStream(&sb, f)
+	if len(p.AudioTracks) > 0 {
+		writeSeparator()
+		sb.WriteString("# Audio\n")
+		for _, t := range p.AudioTracks {
+			writeMediaTrack(&sb, t)
+		}
+	}
+
+	if len(p.Variants) > 0 {
+		writeSeparator()
+		sb.WriteString("# Video\n")
+		for _, v := range p.Variants {
+			writeVariant(&sb, v)
+		}
+	}
+
+	if len(p.IFrames) > 0 {
+		writeSeparator()
+		sb.WriteString("# I-Frame Playlists\n")
+		for _, f := range p.IFrames {
+			writeIFrameStream(&sb, f)
+		}
 	}
 
 	// Pass-through unknown lines.
