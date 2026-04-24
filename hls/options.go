@@ -1,6 +1,8 @@
 package hls
 
 import (
+	"strings"
+
 	manifestor "github.com/alanzng/manifestor"
 )
 
@@ -31,6 +33,7 @@ type filterConfig struct {
 	customTransform   func(*Variant)
 	uriSigner         func(string) string
 	clearAudio        bool
+	audioLabelByLang  map[string]string
 }
 
 // WithCodec keeps only variants whose Codecs field matches the given codec family.
@@ -136,4 +139,29 @@ func WithURISigner(fn func(string) string) Option {
 // inject options are applied. Use to replace origin audio entirely.
 func WithClearAudioTracks() Option {
 	return func(c *filterConfig) { c.clearAudio = true }
+}
+
+// WithAudioLabelByLanguage rewrites the NAME attribute of every ORIGIN audio
+// track whose LANGUAGE matches one of the map keys (case-insensitive BCP-47
+// language tag). Injected audio tracks and subtitles are not affected.
+// An entry with an empty-string value is ignored (original NAME preserved),
+// which prevents accidentally blanking a name.
+//
+// Example:
+//
+//	hls.Filter(content, hls.WithAudioLabelByLanguage(map[string]string{
+//	    "tg": "Tiếng gốc",
+//	}))
+func WithAudioLabelByLanguage(m map[string]string) Option {
+	// Normalize keys to lowercase at construction time so lookups during
+	// Filter do not need to re-lowercase. Empty values are dropped here so
+	// the filter never has to guard against them.
+	normalized := make(map[string]string, len(m))
+	for k, v := range m {
+		if v == "" {
+			continue
+		}
+		normalized[strings.ToLower(k)] = v
+	}
+	return func(c *filterConfig) { c.audioLabelByLang = normalized }
 }
