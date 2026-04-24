@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_No changes yet._
+
+---
+
+## [0.8.0] - 2026-04-24
+
 ### Added
 
 - **`manifest.WithAudioLabelByLanguage(map[string]string)`** — rewrites the display name of every origin audio track whose BCP-47 language tag matches a map key (case-insensitive). Sets HLS `NAME` on `#EXT-X-MEDIA:TYPE=AUDIO` entries and DASH `label` on audio AdaptationSets. Subtitles, video sets, and injected audio tracks are untouched. Empty-string values are ignored (original name preserved). Example: `{"tg": "Tiếng gốc", "en": "English"}`.
