@@ -10,26 +10,26 @@ import (
 type Option func(*filterConfig)
 
 type filterConfig struct {
-	codec           manifestor.Codec
-	maxWidth        int
-	maxHeight       int
-	minWidth        int
-	minHeight       int
-	exactWidth      int
-	exactHeight     int
-	maxBandwidth    int
-	minBandwidth    int
-	maxFrameRate    float64
-	audioLanguage   string
-	mimeType        manifestor.MimeType
-	cdnBaseURL      string
-	absoluteOrigin  string
-	authToken       string
-	injectSets      []AdaptationSetParams
-	customFilter    func(*Representation) bool
-	customTransform func(*Representation)
-	uriSigner       func(string) string
-	clearAudio      bool
+	codec            manifestor.Codec
+	maxWidth         int
+	maxHeight        int
+	minWidth         int
+	minHeight        int
+	exactWidth       int
+	exactHeight      int
+	maxBandwidth     int
+	minBandwidth     int
+	maxFrameRate     float64
+	audioLanguage    string
+	mimeType         manifestor.MimeType
+	cdnBaseURL       string
+	absoluteOrigin   string
+	authToken        string
+	injectSets       []AdaptationSetParams
+	customFilter     func(*Representation) bool
+	customTransform  func(*Representation)
+	uriSigner        func(string) string
+	clearAudio       bool
 	audioLabelByLang map[string]string
 }
 
