@@ -326,3 +326,112 @@ func TestSerialize_HDCPLevel(t *testing.T) {
 		t.Errorf("expected HDCP-LEVEL=TYPE-1 in output:\n%s", out)
 	}
 }
+
+// ---- Section-comment output shape ----
+
+func TestSerialize_EmitsMediaPlaylistsBanner(t *testing.T) {
+	p := &MasterPlaylist{Version: 6}
+	out, _ := Serialize(p)
+	if !strings.Contains(out, "\n# Media Playlists\n") {
+		t.Errorf("missing '# Media Playlists' banner in output:\n%s", out)
+	}
+}
+
+func TestSerialize_EmitsSectionHeaders_WhenPresent(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_master.m3u8")
+	p, _ := Parse(content)
+	out, _ := Serialize(p)
+
+	// bento4_master has audio + variants + I-frames, but NO subtitles.
+	for _, want := range []string{"# Audio", "# Video", "# I-Frame Playlists"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing section header %q in output:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "# Subtitles") {
+		t.Errorf("unexpected '# Subtitles' header when no subtitles present:\n%s", out)
+	}
+}
+
+func TestSerialize_SectionOrder(t *testing.T) {
+	// Build a playlist with ALL four sections populated so we can assert order.
+	p := &MasterPlaylist{
+		Version: 6,
+		Subtitles: []MediaTrack{
+			{Type: "SUBTITLES", GroupID: "subs", Name: "English", Language: "en", URI: "s.m3u8"},
+		},
+		AudioTracks: []MediaTrack{
+			{Type: "AUDIO", GroupID: "aud", Name: "English", Language: "en", URI: "a.m3u8"},
+		},
+		Variants: []Variant{
+			{URI: "v.m3u8", Bandwidth: 1000000},
+		},
+		IFrames: []IFrameStream{
+			{URI: "i.m3u8", Bandwidth: 500000},
+		},
+	}
+	out, _ := Serialize(p)
+
+	subs := strings.Index(out, "# Subtitles")
+	audio := strings.Index(out, "# Audio")
+	video := strings.Index(out, "# Video")
+	iframes := strings.Index(out, "# I-Frame Playlists")
+	if !(subs >= 0 && subs < audio && audio < video && video < iframes) {
+		t.Errorf("section order wrong: subs=%d audio=%d video=%d iframes=%d\n%s",
+			subs, audio, video, iframes, out)
+	}
+}
+
+func TestSerialize_SkipsEmptySections(t *testing.T) {
+	// Only variants — every other section must be absent.
+	p := &MasterPlaylist{
+		Version:  6,
+		Variants: []Variant{{URI: "v.m3u8", Bandwidth: 1000000}},
+	}
+	out, _ := Serialize(p)
+
+	for _, unwanted := range []string{"# Subtitles", "# Audio", "# I-Frame Playlists"} {
+		if strings.Contains(out, unwanted) {
+			t.Errorf("unexpected header %q when section is empty:\n%s", unwanted, out)
+		}
+	}
+	if !strings.Contains(out, "# Video") {
+		t.Errorf("missing '# Video' header when variants present:\n%s", out)
+	}
+}
+
+func TestSerialize_SkipsAllSectionsWhenAllEmpty(t *testing.T) {
+	// Edge case: playlist with only Version, no tracks / variants / iframes.
+	p := &MasterPlaylist{Version: 6}
+	out, _ := Serialize(p)
+
+	for _, unwanted := range []string{"# Subtitles", "# Audio", "# Video", "# I-Frame Playlists"} {
+		if strings.Contains(out, unwanted) {
+			t.Errorf("unexpected header %q when playlist is empty:\n%s", unwanted, out)
+		}
+	}
+	if !strings.Contains(out, "# Media Playlists") {
+		t.Errorf("missing '# Media Playlists' banner:\n%s", out)
+	}
+}
+
+func TestSerialize_BlankLineBetweenPresentSections(t *testing.T) {
+	// bento4_master has Audio + Video + IFrames but NOT Subtitles.
+	content := mustReadFixture(t, "../testdata/hls/bento4_master.m3u8")
+	p, _ := Parse(content)
+	out, _ := Serialize(p)
+
+	// '# Audio' is the first present section — no blank line before it
+	// (the '# Media Playlists' banner line immediately precedes it).
+	// Blank lines must precede every LATER section header.
+	if !strings.Contains(out, "\n\n# Video\n") {
+		t.Errorf("missing blank line before '# Video':\n%s", out)
+	}
+	if !strings.Contains(out, "\n\n# I-Frame Playlists\n") {
+		t.Errorf("missing blank line before '# I-Frame Playlists':\n%s", out)
+	}
+	// No triple newline (would mean an empty-section gap).
+	if strings.Contains(out, "\n\n\n") {
+		t.Errorf("unexpected triple newline (empty-section gap):\n%s", out)
+	}
+}
