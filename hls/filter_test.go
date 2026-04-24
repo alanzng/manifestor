@@ -804,3 +804,146 @@ func TestFilter_ClearAudioTracks_HLS(t *testing.T) {
 		t.Fatalf("injected audio missing: %s", out)
 	}
 }
+
+// ---- WithAudioLabelByLanguage ----
+
+func TestFilter_HLS_AudioLabelByLanguage_RewritesMatchingTracks(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_master.m3u8")
+	out, err := Filter(content, WithAudioLabelByLanguage(map[string]string{
+		"en": "Tiếng Anh",
+	}))
+	if err != nil {
+		t.Fatalf("Filter: %v", err)
+	}
+	p, err := Parse(out)
+	if err != nil {
+		t.Fatalf("re-parse: %v", err)
+	}
+
+	found := false
+	for _, at := range p.AudioTracks {
+		if strings.EqualFold(at.Language, "en") {
+			found = true
+			if at.Name != "Tiếng Anh" {
+				t.Errorf("audio[lang=en].Name = %q, want %q", at.Name, "Tiếng Anh")
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected at least one audio track with LANGUAGE=\"en\" in the fixture")
+	}
+}
+
+func TestFilter_HLS_AudioLabelByLanguage_IsCaseInsensitive(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_master.m3u8")
+	out, err := Filter(content, WithAudioLabelByLanguage(map[string]string{
+		"EN": "UPPER", // constructor must lowercase the key
+	}))
+	if err != nil {
+		t.Fatalf("Filter: %v", err)
+	}
+	p, _ := Parse(out)
+
+	for _, at := range p.AudioTracks {
+		if strings.EqualFold(at.Language, "en") && at.Name != "UPPER" {
+			t.Errorf("audio[lang=en].Name = %q, want %q", at.Name, "UPPER")
+		}
+	}
+}
+
+func TestFilter_HLS_AudioLabelByLanguage_LeavesOtherLangsUnchanged(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_master.m3u8")
+
+	orig, _ := Parse(content)
+	origNames := map[string]string{}
+	for _, at := range orig.AudioTracks {
+		origNames[strings.ToLower(at.Language)] = at.Name
+	}
+
+	out, err := Filter(content, WithAudioLabelByLanguage(map[string]string{
+		"zz": "Never Matches",
+	}))
+	if err != nil {
+		t.Fatalf("Filter: %v", err)
+	}
+	p, _ := Parse(out)
+
+	for _, at := range p.AudioTracks {
+		want := origNames[strings.ToLower(at.Language)]
+		if at.Name != want {
+			t.Errorf("audio[lang=%s].Name = %q, want unchanged %q", at.Language, at.Name, want)
+		}
+	}
+}
+
+func TestFilter_HLS_AudioLabelByLanguage_EmptyOverrideKeepsOriginal(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_master.m3u8")
+	orig, _ := Parse(content)
+	var origName string
+	for _, at := range orig.AudioTracks {
+		if strings.EqualFold(at.Language, "en") {
+			origName = at.Name
+			break
+		}
+	}
+
+	out, _ := Filter(content, WithAudioLabelByLanguage(map[string]string{
+		"en": "", // empty value must be ignored
+	}))
+	p, _ := Parse(out)
+	for _, at := range p.AudioTracks {
+		if strings.EqualFold(at.Language, "en") && at.Name != origName {
+			t.Errorf("audio[lang=en].Name = %q, want original %q (empty override must be ignored)",
+				at.Name, origName)
+		}
+	}
+}
+
+func TestFilter_HLS_AudioLabelByLanguage_DoesNotTouchSubtitles(t *testing.T) {
+	// Playlist with a subtitle track whose language matches an override.
+	content := "#EXTM3U\n" +
+		"#EXT-X-VERSION:6\n" +
+		"#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",NAME=\"Original\",LANGUAGE=\"en\",DEFAULT=NO,AUTOSELECT=NO,URI=\"s.m3u8\"\n" +
+		"#EXT-X-STREAM-INF:BANDWIDTH=1000000,SUBTITLES=\"subs\"\n" +
+		"v.m3u8\n"
+
+	out, err := Filter(content, WithAudioLabelByLanguage(map[string]string{
+		"en": "Should Not Apply",
+	}))
+	if err != nil {
+		t.Fatalf("Filter: %v", err)
+	}
+	p, _ := Parse(out)
+	if len(p.Subtitles) != 1 {
+		t.Fatalf("subtitle count = %d, want 1", len(p.Subtitles))
+	}
+	if p.Subtitles[0].Name != "Original" {
+		t.Errorf("subtitle.Name = %q, want %q (override must not touch subtitles)",
+			p.Subtitles[0].Name, "Original")
+	}
+}
+
+func TestFilter_HLS_AudioLabelByLanguage_DoesNotTouchInjectedTracks(t *testing.T) {
+	content := mustReadFixture(t, "../testdata/hls/bento4_master.m3u8")
+	out, err := Filter(content,
+		WithClearAudioTracks(),
+		WithInjectAudioTrack(AudioTrackParams{
+			GroupID: "audio", Name: "Injected Dub", Language: "en",
+			URI: "dub-en.m3u8", Default: true, AutoSelect: true,
+		}),
+		WithAudioLabelByLanguage(map[string]string{
+			"en": "Should Not Apply",
+		}),
+	)
+	if err != nil {
+		t.Fatalf("Filter: %v", err)
+	}
+	p, _ := Parse(out)
+	if len(p.AudioTracks) != 1 {
+		t.Fatalf("audio count = %d, want 1", len(p.AudioTracks))
+	}
+	if p.AudioTracks[0].Name != "Injected Dub" {
+		t.Errorf("injected audio.Name = %q, want %q (override must not touch injected tracks)",
+			p.AudioTracks[0].Name, "Injected Dub")
+	}
+}

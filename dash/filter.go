@@ -114,6 +114,11 @@ func filterAdaptationSet(as *AdaptationSet, cfg *filterConfig) *AdaptationSet {
 
 	result := *as
 	result.Representations = surviving
+	if len(cfg.audioLabelByLang) > 0 && isAudioAdaptationSet(&result) && result.Lang != "" {
+		if name, ok := cfg.audioLabelByLang[strings.ToLower(result.Lang)]; ok {
+			result.Name = name
+		}
+	}
 	return &result
 }
 

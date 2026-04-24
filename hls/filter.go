@@ -184,17 +184,31 @@ func iframePasses(f *IFrameStream, cfg *filterConfig) bool {
 
 // filterAudioTracks returns the audio tracks that pass the language filter.
 // If no language filter is set, all tracks are preserved (F-13).
+// After filtering, each surviving track's Name is overwritten according to
+// cfg.audioLabelByLang when its Language matches (case-insensitive).
 func filterAudioTracks(tracks []MediaTrack, cfg *filterConfig) []MediaTrack {
 	if cfg.clearAudio {
 		return nil
 	}
+	var out []MediaTrack
 	if cfg.audioLanguage == "" {
-		return tracks
+		out = append(out, tracks...)
+	} else {
+		out = tracks[:0:0]
+		for _, t := range tracks {
+			if strings.EqualFold(t.Language, cfg.audioLanguage) {
+				out = append(out, t)
+			}
+		}
 	}
-	out := tracks[:0:0]
-	for _, t := range tracks {
-		if strings.EqualFold(t.Language, cfg.audioLanguage) {
-			out = append(out, t)
+	if len(cfg.audioLabelByLang) > 0 {
+		for i := range out {
+			if out[i].Language == "" {
+				continue
+			}
+			if name, ok := cfg.audioLabelByLang[strings.ToLower(out[i].Language)]; ok {
+				out[i].Name = name
+			}
 		}
 	}
 	return out
