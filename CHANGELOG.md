@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`manifest.WithAudioLabelByLanguage(map[string]string)`** — rewrites the display name of every origin audio track whose BCP-47 language tag matches a map key (case-insensitive). Sets HLS `NAME` on `#EXT-X-MEDIA:TYPE=AUDIO` entries and DASH `label` on audio AdaptationSets. Subtitles, video sets, and injected audio tracks are untouched. Empty-string values are ignored (original name preserved). Example: `{"tg": "Tiếng gốc", "en": "English"}`.
+
 ### Changed
 
 - **HLS `Serialize` output** now includes Bento4-style section-header comments (`# Media Playlists`, `# Subtitles`, `# Audio`, `# Video`, `# I-Frame Playlists`) for readable, debug-friendly output. Empty sections (and their separators) are skipped. Per RFC 8216 §4, plain `#` comments are ignored by compliant HLS clients, so this is a safe, non-breaking change.
