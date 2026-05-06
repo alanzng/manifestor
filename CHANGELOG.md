@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_No changes yet._
+### Added
+
+- **Trial slicing primitives** — extracted from VieON's `vo-playlist` service so any consumer building trial / preview manifests can reuse the same logic:
+  - **`hls.SliceMediaPlaylist(raw string, n int) string`** — line-walking trim of an HLS media playlist to the first N `#EXTINF` segments. Preserves header tags including `#EXT-X-MAP`, drops any input `#EXT-X-ENDLIST`, and re-emits a single trailing `#EXT-X-ENDLIST`. Standalone tags between segments (e.g. `#EXT-X-KEY` rotation, unpaired `#EXT-X-DATERANGE`) are dropped — safe for unencrypted on-demand HLS. VOD-only.
+  - **`hls.SliceMediaPlaylistByDuration(raw string, trialDuration, defaultTarget int) (string, int)`** — convenience wrapper that derives the segment count from the playlist's `#EXT-X-TARGETDURATION` (falling back to `defaultTarget`, or 4 if both are zero or negative). Returns the sliced playlist and the segment count.
+  - **`hls.AddTrialSuffix(uri string) string`** — transforms `foo.m3u8` into `foo_trial.m3u8` by splitting on the final extension.
+  - **`dash.PatchPresentationDuration(raw string, seconds int) string`** — root-level rewrite of `mediaPresentationDuration` to `PT{seconds}S` (single or double-quoted). No-op when the attribute is absent. Segments and timeline are untouched.
 
 ---
 
