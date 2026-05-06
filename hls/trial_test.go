@@ -109,3 +109,38 @@ func TestSliceMediaPlaylist_EmptyInput(t *testing.T) {
 		t.Errorf("empty input: got %q, want %q", out, "#EXT-X-ENDLIST\n")
 	}
 }
+
+func TestSliceMediaPlaylistByDuration_UsesTargetDuration(t *testing.T) {
+	raw := mustReadFile(t, "../testdata/hls/media_short.m3u8") // target=4
+	out, n := SliceMediaPlaylistByDuration(raw, 12, 4)
+	if n != 3 {
+		t.Errorf("n: got %d, want 3", n)
+	}
+	for _, seg := range []string{"seg-00001.m4s", "seg-00002.m4s", "seg-00003.m4s"} {
+		if !contains(out, seg) {
+			t.Errorf("missing %s in output:\n%s", seg, out)
+		}
+	}
+	if contains(out, "seg-00004.m4s") {
+		t.Errorf("expected seg-00004.m4s dropped")
+	}
+}
+
+func TestSliceMediaPlaylistByDuration_FallsBackToDefaultTarget(t *testing.T) {
+	raw := "#EXTM3U\n#EXTINF:5.0,\na.ts\n#EXTINF:5.0,\nb.ts\n#EXTINF:5.0,\nc.ts\n#EXT-X-ENDLIST\n"
+	out, n := SliceMediaPlaylistByDuration(raw, 10, 5)
+	if n != 2 {
+		t.Errorf("n: got %d, want 2", n)
+	}
+	if !contains(out, "a.ts") || !contains(out, "b.ts") || contains(out, "c.ts") {
+		t.Errorf("unexpected output:\n%s", out)
+	}
+}
+
+func TestSliceMediaPlaylistByDuration_DefaultTargetZeroFallsBackToFour(t *testing.T) {
+	raw := "#EXTM3U\n#EXTINF:4.0,\na.ts\n#EXTINF:4.0,\nb.ts\n#EXT-X-ENDLIST\n"
+	_, n := SliceMediaPlaylistByDuration(raw, 8, 0)
+	if n != 2 {
+		t.Errorf("n: got %d, want 2 (default target=4)", n)
+	}
+}

@@ -2,6 +2,8 @@ package hls
 
 import (
 	"path"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -99,4 +101,35 @@ func appendHeaderLine(sb *strings.Builder, line string) {
 	}
 	sb.WriteString(line)
 	sb.WriteByte('\n')
+}
+
+var trialTargetDurationRe = regexp.MustCompile(`(?m)^#EXT-X-TARGETDURATION:(\d+)`)
+
+// SliceMediaPlaylistByDuration trims raw to the first ⌊trialDuration / target⌋
+// segments, where target is read from the playlist's #EXT-X-TARGETDURATION or
+// from defaultTarget if that tag is absent. If both are zero or negative,
+// target falls back to 4 (matching legacy vo-playlist behavior).
+//
+// Returns the sliced playlist and the segment count actually requested.
+//
+// Pure function — safe for concurrent use.
+func SliceMediaPlaylistByDuration(raw string, trialDuration, defaultTarget int) (string, int) {
+	target := defaultTarget
+	if v := extractTargetDuration(raw); v > 0 {
+		target = v
+	}
+	if target <= 0 {
+		target = 4
+	}
+	n := trialDuration / target
+	return SliceMediaPlaylist(raw, n), n
+}
+
+func extractTargetDuration(raw string) int {
+	m := trialTargetDurationRe.FindStringSubmatch(raw)
+	if len(m) < 2 {
+		return 0
+	}
+	v, _ := strconv.Atoi(m[1])
+	return v
 }
