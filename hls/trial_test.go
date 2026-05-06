@@ -44,3 +44,68 @@ func mustReadFile(t *testing.T, p string) string {
 }
 func contains(haystack, needle string) bool { return strings.Contains(haystack, needle) }
 func count(haystack, needle string) int     { return strings.Count(haystack, needle) }
+
+func TestSliceMediaPlaylist_KeepsFirstNSegments(t *testing.T) {
+	raw := mustReadFile(t, "../testdata/hls/media_short.m3u8")
+	out := SliceMediaPlaylist(raw, 2)
+
+	for _, want := range []string{
+		"#EXTM3U",
+		"#EXT-X-VERSION:6",
+		"#EXT-X-TARGETDURATION:4",
+		`#EXT-X-MAP:URI="init.mp4"`,
+	} {
+		if !contains(out, want) {
+			t.Errorf("missing header tag %q in:\n%s", want, out)
+		}
+	}
+	if !contains(out, "seg-00001.m4s") || !contains(out, "seg-00002.m4s") {
+		t.Errorf("expected first two segments kept, got:\n%s", out)
+	}
+	if contains(out, "seg-00003.m4s") {
+		t.Errorf("expected seg-00003.m4s dropped, got:\n%s", out)
+	}
+	if count(out, "#EXT-X-ENDLIST") != 1 {
+		t.Errorf("expected exactly one #EXT-X-ENDLIST, got %d", count(out, "#EXT-X-ENDLIST"))
+	}
+}
+
+func TestSliceMediaPlaylist_GoldenFile(t *testing.T) {
+	raw := mustReadFile(t, "../testdata/hls/media_short.m3u8")
+	want := mustReadFile(t, "../testdata/hls/media_short_trial2.golden.m3u8")
+	got := SliceMediaPlaylist(raw, 2)
+	if got != want {
+		t.Errorf("output drift vs golden file.\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
+func TestSliceMediaPlaylist_HandlesCRLF(t *testing.T) {
+	raw := strings.ReplaceAll(mustReadFile(t, "../testdata/hls/media_short.m3u8"), "\n", "\r\n")
+	out := SliceMediaPlaylist(raw, 1)
+	if !contains(out, "seg-00001.m4s") {
+		t.Errorf("CRLF input not handled: %s", out)
+	}
+	if contains(out, "\r") {
+		t.Errorf("output should be LF-only, got CR in:\n%q", out)
+	}
+}
+
+func TestSliceMediaPlaylist_ZeroOrNegativeNYieldsNoSegments(t *testing.T) {
+	raw := mustReadFile(t, "../testdata/hls/media_short.m3u8")
+	for _, n := range []int{0, -3} {
+		out := SliceMediaPlaylist(raw, n)
+		if contains(out, "#EXTINF") {
+			t.Errorf("expected no segments for n=%d, got:\n%s", n, out)
+		}
+		if !contains(out, "#EXT-X-ENDLIST") {
+			t.Errorf("expected ENDLIST appended even for n=%d", n)
+		}
+	}
+}
+
+func TestSliceMediaPlaylist_EmptyInput(t *testing.T) {
+	out := SliceMediaPlaylist("", 5)
+	if out != "#EXT-X-ENDLIST\n" {
+		t.Errorf("empty input: got %q, want %q", out, "#EXT-X-ENDLIST\n")
+	}
+}
