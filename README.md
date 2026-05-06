@@ -227,6 +227,27 @@ b.AddAdaptationSet(dash.AdaptationSetParams{
 mpd, err := b.Build()
 ```
 
+### Trial Slicing
+
+Generate short preview manifests from a full playlist — useful for paywalled previews or content sampling.
+
+```go
+// HLS: keep the first 2 segments of a media playlist.
+trial := hls.SliceMediaPlaylist(rawMediaPlaylist, 2)
+
+// HLS: keep ⌊60s / EXT-X-TARGETDURATION⌋ segments (default target = 4s).
+trial, n := hls.SliceMediaPlaylistByDuration(rawMediaPlaylist, 60, 4)
+
+// HLS: rewrite a child URI for the trial copy.
+//   "video_720p.m3u8" → "video_720p_trial.m3u8"
+uri := hls.AddTrialSuffix(child.URI)
+
+// DASH: rewrite root mediaPresentationDuration to PT60S.
+trialMPD := dash.PatchPresentationDuration(rawMPD, 60)
+```
+
+VOD-only. See godoc for full behavior contract.
+
 ### HTTP Server
 
 ```bash
