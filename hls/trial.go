@@ -84,6 +84,11 @@ func appendSegmentBody(sb *strings.Builder, lines []string, start int) (int, boo
 		if strings.HasPrefix(next, "#EXTINF:") {
 			return j - 1, false
 		}
+		if strings.HasPrefix(next, "#EXT-X-ENDLIST") {
+			// Skip a malformed inline ENDLIST — SliceMediaPlaylist
+			// re-emits a single trailing ENDLIST regardless.
+			continue
+		}
 		sb.WriteString(next)
 		sb.WriteByte('\n')
 		if !strings.HasPrefix(next, "#") {

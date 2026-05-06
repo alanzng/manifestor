@@ -6,8 +6,8 @@ import (
 )
 
 // trialMPDDurationRe matches the mediaPresentationDuration attribute on the
-// root MPD element. Matches single OR double-quoted values; non-greedy so it
-// only consumes one attribute occurrence at a time.
+// root MPD element. Matches single OR double-quoted values; uses negated
+// character classes so each match stops at the first closing quote.
 var trialMPDDurationRe = regexp.MustCompile(`mediaPresentationDuration\s*=\s*"[^"]*"|mediaPresentationDuration\s*=\s*'[^']*'`)
 
 // PatchPresentationDuration rewrites every mediaPresentationDuration attribute
