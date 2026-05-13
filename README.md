@@ -1,9 +1,9 @@
 # manifestor
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/alanzng/manifestor.svg)](https://pkg.go.dev/github.com/alanzng/manifestor)
-[![CI](https://github.com/alanzng/manifestor/actions/workflows/ci.yml/badge.svg)](https://github.com/alanzng/manifestor/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/alanzng/manifestor)](https://goreportcard.com/report/github.com/alanzng/manifestor)
-[![Coverage](https://codecov.io/gh/alanzng/manifestor/branch/main/graph/badge.svg)](https://codecov.io/gh/alanzng/manifestor)
+[![Go Reference](https://pkg.go.dev/badge/github.com/datvietvac-techhub/manifestor.svg)](https://pkg.go.dev/github.com/datvietvac-techhub/manifestor)
+[![CI](https://github.com/datvietvac-techhub/manifestor/actions/workflows/ci.yml/badge.svg)](https://github.com/datvietvac-techhub/manifestor/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/datvietvac-techhub/manifestor)](https://goreportcard.com/report/github.com/datvietvac-techhub/manifestor)
+[![Coverage](https://codecov.io/gh/datvietvac-techhub/manifestor/branch/main/graph/badge.svg)](https://codecov.io/gh/datvietvac-techhub/manifestor)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Parse, filter, build, and transform HLS & DASH manifests in Go. Zero dependencies. Ships as a library, HTTP proxy server, and CLI tool.
@@ -30,13 +30,13 @@ Parse, filter, build, and transform HLS & DASH manifests in Go. Zero dependencie
 ### Library
 
 ```bash
-go get github.com/alanzng/manifestor
+go get github.com/datvietvac-techhub/manifestor
 ```
 
 ### CLI
 
 ```bash
-go install github.com/alanzng/manifestor/cmd/manifestor@latest
+go install github.com/datvietvac-techhub/manifestor/cmd/manifestor@latest
 ```
 
 ### Docker
@@ -53,8 +53,8 @@ docker pull ghcr.io/alanng/manifestor:latest
 
 ```go
 import (
-    manifestor "github.com/alanzng/manifestor"
-    "github.com/alanzng/manifestor/manifest"
+    manifestor "github.com/datvietvac-techhub/manifestor"
+    "github.com/datvietvac-techhub/manifestor/manifest"
 )
 
 filtered, err := manifest.Filter(content,
@@ -82,9 +82,9 @@ Take a Bento4-generated master playlist with mixed AVC1/HVC1 video and a single 
 
 ```go
 import (
-    manifestor "github.com/alanzng/manifestor"
-    "github.com/alanzng/manifestor/hls"
-    "github.com/alanzng/manifestor/manifest"
+    manifestor "github.com/datvietvac-techhub/manifestor"
+    "github.com/datvietvac-techhub/manifestor/hls"
+    "github.com/datvietvac-techhub/manifestor/manifest"
 )
 
 const cdnBase = "https://vod-bp.vieon.vn/abc123/.../vod/2026/03/12/uuid/"
@@ -115,9 +115,9 @@ out, err := manifest.Filter(content,
 
 ```go
 import (
-    manifestor "github.com/alanzng/manifestor"
-    "github.com/alanzng/manifestor/dash"
-    "github.com/alanzng/manifestor/manifest"
+    manifestor "github.com/datvietvac-techhub/manifestor"
+    "github.com/datvietvac-techhub/manifestor/dash"
+    "github.com/datvietvac-techhub/manifestor/manifest"
 )
 
 out, err := manifest.Filter(content,
@@ -149,7 +149,7 @@ out, err := manifest.Filter(content,
 ### Build an HLS Master Playlist
 
 ```go
-import "github.com/alanzng/manifestor/hls"
+import "github.com/datvietvac-techhub/manifestor/hls"
 
 b := hls.NewMasterBuilder()
 b.SetVersion(6).
@@ -186,7 +186,7 @@ playlist, err := b.Build()
 ### Build a DASH MPD
 
 ```go
-import "github.com/alanzng/manifestor/dash"
+import "github.com/datvietvac-techhub/manifestor/dash"
 
 b := dash.NewMPDBuilder(dash.MPDConfig{
     Profile:       "isoff-on-demand",

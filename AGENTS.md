@@ -8,7 +8,7 @@ This file helps AI coding agents understand the project structure, conventions, 
 
 `manifestor` is a **zero-dependency Go library** for parsing, filtering, transforming, and building HLS (`.m3u8`) and DASH (`.mpd`) streaming manifests. It also ships as an HTTP proxy server and a CLI tool.
 
-**Module:** `github.com/alanzng/manifestor`
+**Module:** `github.com/datvietvac-techhub/manifestor`
 **Go version:** 1.22+
 **Dependencies:** stdlib only (no external packages in core packages)
 

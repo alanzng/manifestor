@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	manifestor "github.com/alanzng/manifestor"
+	manifestor "github.com/datvietvac-techhub/manifestor"
 )
 
 // moduleRoot returns the module root directory, derived from the location of

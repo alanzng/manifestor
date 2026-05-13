@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	manifestor "github.com/alanzng/manifestor"
-	"github.com/alanzng/manifestor/dash"
-	"github.com/alanzng/manifestor/hls"
+	manifestor "github.com/datvietvac-techhub/manifestor"
+	"github.com/datvietvac-techhub/manifestor/dash"
+	"github.com/datvietvac-techhub/manifestor/hls"
 )
 
 // ---- Detect ----

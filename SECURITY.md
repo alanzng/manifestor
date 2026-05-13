@@ -11,7 +11,7 @@ Please **do not** open a public issue for security vulnerabilities.
 Instead, use **GitHub private vulnerability reporting**:
 
 1. Open the repository’s **Security** tab.
-2. Choose **Report a vulnerability** (or use [Report a vulnerability](https://github.com/alanzng/manifestor/security/advisories/new) if you are signed in and have access).
+2. Choose **Report a vulnerability** (or use [Report a vulnerability](https://github.com/datvietvac-techhub/manifestor/security/advisories/new) if you are signed in and have access).
 
 Include as much of the following as you can:
 

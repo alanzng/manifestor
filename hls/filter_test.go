@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	manifestor "github.com/alanzng/manifestor"
+	manifestor "github.com/datvietvac-techhub/manifestor"
 )
 
 // ---- Codec filter (F-01) ----

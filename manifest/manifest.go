@@ -12,8 +12,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/alanzng/manifestor/dash"
-	"github.com/alanzng/manifestor/hls"
+	"github.com/datvietvac-techhub/manifestor/dash"
+	"github.com/datvietvac-techhub/manifestor/hls"
 )
 
 // Format identifies the manifest format.

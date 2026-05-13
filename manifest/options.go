@@ -1,9 +1,9 @@
 package manifest
 
 import (
-	manifestor "github.com/alanzng/manifestor"
-	"github.com/alanzng/manifestor/dash"
-	"github.com/alanzng/manifestor/hls"
+	manifestor "github.com/datvietvac-techhub/manifestor"
+	"github.com/datvietvac-techhub/manifestor/dash"
+	"github.com/datvietvac-techhub/manifestor/hls"
 )
 
 // sharedOption is embedded by all unified option types so they satisfy Option.

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	manifestor "github.com/alanzng/manifestor"
+	manifestor "github.com/datvietvac-techhub/manifestor"
 )
 
 const vieonHLSCDNBase = "https://vod-bp.vieon.vn/56714cc3c2fc1068f083ae040a56621d/1775572699000/ott-vod-202603/vod/2026/03/12/bffa9046-2fe5-4b01-888e-ed9d91ce035e/"

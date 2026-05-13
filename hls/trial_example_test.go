@@ -3,7 +3,7 @@ package hls_test
 import (
 	"fmt"
 
-	"github.com/alanzng/manifestor/hls"
+	"github.com/datvietvac-techhub/manifestor/hls"
 )
 
 func ExampleSliceMediaPlaylist() {

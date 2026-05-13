@@ -3,7 +3,7 @@ package dash_test
 import (
 	"fmt"
 
-	"github.com/alanzng/manifestor/dash"
+	"github.com/datvietvac-techhub/manifestor/dash"
 )
 
 func ExamplePatchPresentationDuration() {

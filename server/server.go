@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	manifestor "github.com/alanzng/manifestor"
-	"github.com/alanzng/manifestor/dash"
-	"github.com/alanzng/manifestor/hls"
-	"github.com/alanzng/manifestor/manifest"
+	manifestor "github.com/datvietvac-techhub/manifestor"
+	"github.com/datvietvac-techhub/manifestor/dash"
+	"github.com/datvietvac-techhub/manifestor/hls"
+	"github.com/datvietvac-techhub/manifestor/manifest"
 )
 
 // Config holds the configuration for the HTTP server.

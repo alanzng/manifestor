@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alanzng/manifestor/server"
+	"github.com/datvietvac-techhub/manifestor/server"
 )
 
 func ctxGet(t *testing.T, url string) (*http.Response, error) {
