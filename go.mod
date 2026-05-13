@@ -1,3 +1,3 @@
-module github.com/alanzng/manifestor
+module github.com/datvietvac-techhub/manifestor
 
 go 1.22

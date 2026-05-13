@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	manifestor "github.com/alanzng/manifestor"
+	manifestor "github.com/datvietvac-techhub/manifestor"
 )
 
 const vieonCDNBase = "https://vod-bp.vieon.vn/fb3ae865ebf27eec47466c132d33f30d/1775555787000/ott-vod-202603/vod/2026/03/12/bffa9046-2fe5-4b01-888e-ed9d91ce035e/"

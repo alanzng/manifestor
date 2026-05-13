@@ -17,12 +17,12 @@ import (
 	"os"
 	"strings"
 
-	manifestor "github.com/alanzng/manifestor"
+	manifestor "github.com/datvietvac-techhub/manifestor"
 
-	"github.com/alanzng/manifestor/dash"
-	"github.com/alanzng/manifestor/hls"
-	"github.com/alanzng/manifestor/manifest"
-	"github.com/alanzng/manifestor/server"
+	"github.com/datvietvac-techhub/manifestor/dash"
+	"github.com/datvietvac-techhub/manifestor/hls"
+	"github.com/datvietvac-techhub/manifestor/manifest"
+	"github.com/datvietvac-techhub/manifestor/server"
 )
 
 func main() {

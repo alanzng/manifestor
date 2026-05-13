@@ -3,7 +3,7 @@ package hls
 import (
 	"strings"
 
-	manifestor "github.com/alanzng/manifestor"
+	manifestor "github.com/datvietvac-techhub/manifestor"
 )
 
 // Option configures the behaviour of Filter().
