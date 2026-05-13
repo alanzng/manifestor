@@ -131,9 +131,9 @@ _No changes yet._
 - **Integration tests** against Vieon-style VOD HLS and DASH manifests (URI rewriting, codec filters, subtitles/audio).
 - **Project docs:** `AGENTS.md`, requirements, CI (tests, format, lint, bench), Codecov/GitHub Actions wiring, and initial “Who is using” README content.
 
-[Unreleased]: https://github.com/alanzng/manifestor/compare/v0.5.0...HEAD
-[0.5.0]: https://github.com/alanzng/manifestor/compare/v0.4.0...v0.5.0
-[0.4.0]: https://github.com/alanzng/manifestor/compare/v0.3.0...v0.4.0
-[0.3.0]: https://github.com/alanzng/manifestor/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/alanzng/manifestor/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/alanzng/manifestor/compare/24af02ef2c6d0c2d667bf56df934ff92dc247761...v0.1.0
+[Unreleased]: https://github.com/datvietvac-techhub/manifestor/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/datvietvac-techhub/manifestor/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/datvietvac-techhub/manifestor/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/datvietvac-techhub/manifestor/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/datvietvac-techhub/manifestor/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/datvietvac-techhub/manifestor/compare/24af02ef2c6d0c2d667bf56df934ff92dc247761...v0.1.0
