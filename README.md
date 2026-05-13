@@ -39,12 +39,6 @@ go get github.com/datvietvac-techhub/manifestor
 go install github.com/datvietvac-techhub/manifestor/cmd/manifestor@latest
 ```
 
-### Docker
-
-```bash
-docker pull ghcr.io/alanng/manifestor:latest
-```
-
 ---
 
 ## Quick Start
