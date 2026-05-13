@@ -39,12 +39,6 @@ go get github.com/alanzng/manifestor
 go install github.com/alanzng/manifestor/cmd/manifestor@latest
 ```
 
-### Docker
-
-```bash
-docker pull ghcr.io/alanng/manifestor:latest
-```
-
 ---
 
 ## Quick Start
